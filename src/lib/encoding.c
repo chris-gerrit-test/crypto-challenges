@@ -20,6 +20,20 @@ char byte_to_base64_digit(byte b) {
 	return b == 62 ? '=' : '/';
 }
 
+byte base64_digit_to_byte(char digit) {
+	if (digit >= 'A' && digit <= 'Z') {
+		return digit - 'A';
+	}
+	if (digit >= 'a' && digit <= 'z') {
+		return digit - 'a' + 26;
+	}
+	if (digit >= '0' && digit <= '9') {
+		return digit - '0' + 52;
+	}
+	if (digit == '+') return 62;
+	return 63;
+}
+
 int num_base64_digits(size_t num_bytes) {
 	return ((num_bytes + 2) / 3) * 4;
 }
@@ -30,6 +44,10 @@ int num_hex_digits(size_t num_bytes) {
 
 int num_bytes_from_hex(size_t num_hex_digits) {
 	return (num_hex_digits + 1) / 2;
+}
+
+int num_bytes_from_base64(size_t num_base64_digits) {
+	return ((num_base64_digits + 3) / 4) * 3;
 }
 
 int bytes_to_base64(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
@@ -80,6 +98,43 @@ int bytes_to_hex(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 		buf[2 * i + 1] = hex_digits[b & 0xf];
 	}
 	return num_chars;
+}
+
+int base64_to_bytes(char* base64, byte *buf, size_t buf_size) {
+	size_t num_chars = strlen(base64);
+	size_t max_num_bytes = num_bytes_from_base64(num_chars);
+	if (max_num_bytes > buf_size) {
+		return -1;
+	}
+	size_t num_bytes = 0;
+	for (int i = 0; i < num_chars; i+= 4) {
+		uint32_t group;  // the 24-bit group of bits we are handling now
+		// Read in from input
+		group = base64_digit_to_byte(base64[i]) << 18;
+		if (i + 1 < num_chars) {
+			group |= base64_digit_to_byte(base64[i + 1]) << 12;
+		}
+		if (i + 2 < num_chars && base64[i + 2] != '=') {
+			group |= base64_digit_to_byte(base64[i + 2]) << 6;
+		}
+		if (i + 3 < num_chars && base64[i + 3] != '=') {
+			group |= base64_digit_to_byte(base64[i + 3]);
+		}
+		// Write out to output
+		if (i + 3 < num_chars && base64[i + 3] != '=') {
+			++num_bytes;
+			buf[i / 4 * 3 + 2] = group & 0xff;
+		}
+		group = group >> 8;
+		if (i + 2 < num_chars && base64[i + 2] != '=') {
+			++num_bytes;
+			buf[i / 4 * 3 + 1] = group & 0xff;
+		}
+		group = group >> 8;
+		buf[i / 4 * 3] = group & 0xff;
+		++num_bytes;
+	}
+	return num_bytes;
 }
 
 int hex_to_bytes(char* hex, byte *buf, size_t buf_size) {

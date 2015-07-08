@@ -11,6 +11,5 @@ int main() {
 	char* buf = calloc(hex_digits + 1, sizeof(char));
 	bytes_to_hex((byte*)msg, strlen(msg), buf, hex_digits + 1);
     printf("%s\n", buf);
-
     free(buf);
 }

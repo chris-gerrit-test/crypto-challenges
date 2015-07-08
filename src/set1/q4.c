@@ -40,8 +40,6 @@ int main() {
         } else {
             free(c);
         }
-        line = NULL;
-        n = 0;
     }
 
 	printf("%s\n", best_line);

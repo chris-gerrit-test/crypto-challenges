@@ -13,3 +13,14 @@ double score_text(char* text, size_t len) {
 	}
 	return len == 0 ? 0.0 : score / len;
 }
+
+int hamming_distance(char* str1, char* str2) {
+	int d = 0;
+	while (*str1) {
+		char diff = *str1 ^ *str2;
+		d += __builtin_popcount(diff);
+		++str1;
+		++str2;
+	}
+	return d;
+}
