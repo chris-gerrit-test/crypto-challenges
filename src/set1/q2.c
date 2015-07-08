@@ -14,7 +14,7 @@ int main() {
 
     printf(" %s\n^%s\n", in1s, in2s);
 
-	xor(in1, in2, num_bytes, in1);
+	repeated_xor(in1, num_bytes, in2, num_bytes, in1);
 	bytes_to_hex(in1, num_bytes, in1s, strlen(in1s) + 1);
 
     printf("=%s\n", in1s);
