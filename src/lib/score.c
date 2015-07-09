@@ -24,3 +24,12 @@ int hamming_distance(char* str1, char* str2) {
 	}
 	return d;
 }
+
+int hamming_distance_n(char* str1, char* str2, size_t len) {
+	int d = 0;
+	for (int i = 0; i < len; ++i) {
+		char diff = str1[i] ^ str2[i];
+		d += __builtin_popcount(diff);
+	}
+	return d;
+}
