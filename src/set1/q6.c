@@ -43,7 +43,7 @@ int main() {
     byte* col = calloc(col_size, sizeof(byte));
     char* key = calloc(best_keysize, sizeof(char));
     for (int i = 0; i < best_keysize; ++i) {
-    	for (int j = 0; j < col_size; ++j) {
+    	for (size_t j = 0; j < col_size; ++j) {
     		col[j] = as_bytes[j * best_keysize + i];
     	}
 		double best_score = -1.0;

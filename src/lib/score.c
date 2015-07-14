@@ -7,7 +7,7 @@ double letter_scores[] = {
 double score_text(char* text, size_t len) {
 	double score = 0.0;
 	char c;
-	for (int i = 0; i < len; ++i) {
+	for (size_t i = 0; i < len; ++i) {
 		c = text[i];
 		score += letter_scores[(unsigned char)tolower(c)];
 	}
@@ -27,7 +27,7 @@ int hamming_distance(char* str1, char* str2) {
 
 int hamming_distance_n(char* str1, char* str2, size_t len) {
 	int d = 0;
-	for (int i = 0; i < len; ++i) {
+	for (size_t i = 0; i < len; ++i) {
 		char diff = str1[i] ^ str2[i];
 		d += __builtin_popcount(diff);
 	}

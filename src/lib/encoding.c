@@ -56,7 +56,7 @@ int bytes_to_base64(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 		return -1;
 	}
 	buf[num_chars] = '\0';
-	for (int i = 0; i < num_bytes; i+= 3) {
+	for (size_t i = 0; i < num_bytes; i+= 3) {
 		uint32_t group;  // the 24-bit group of bits we are handling now
 		// Read in from input
 		group = bytes[i] << 16;
@@ -92,7 +92,7 @@ int bytes_to_hex(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 		return -1;
 	}
 	buf[num_chars] = '\0';
-	for (int i = 0; i < num_bytes; i++) {
+	for (size_t i = 0; i < num_bytes; i++) {
 		byte b = bytes[i];
 		buf[2 * i] = hex_digits[b >> 4];
 		buf[2 * i + 1] = hex_digits[b & 0xf];
@@ -107,7 +107,7 @@ int base64_to_bytes(char* base64, byte *buf, size_t buf_size) {
 		return -1;
 	}
 	size_t num_bytes = 0;
-	for (int i = 0; i < num_chars; i+= 4) {
+	for (size_t i = 0; i < num_chars; i+= 4) {
 		uint32_t group;  // the 24-bit group of bits we are handling now
 		// Read in from input
 		group = base64_digit_to_byte(base64[i]) << 18;
@@ -143,7 +143,7 @@ int hex_to_bytes(char* hex, byte *buf, size_t buf_size) {
 	if (num_bytes > buf_size) {
 		return -1;
 	}
-	for (int i = 0; i < num_chars; ++i) {
+	for (size_t i = 0; i < num_chars; ++i) {
 		char c = hex[num_chars - i - 1];
 		char digit = 0;
 		if (c >= '0' && c <= '9') {
@@ -164,7 +164,7 @@ int hex_to_bytes(char* hex, byte *buf, size_t buf_size) {
 
 void print_bytes(byte* bytes, size_t num_bytes) {
 	printf("Printing %zd bytes:", num_bytes);
-	for (int i = 0; i < num_bytes; i++) {
+	for (size_t i = 0; i < num_bytes; i++) {
 		printf(" %u", bytes[i]);
 	}
 	printf("\n");
