@@ -7,8 +7,8 @@ int main() {
 	char in1s[] = "1c0111001f010100061a024b53535009181c";
 	char *in2s = "686974207468652062756c6c277320657965";
 	size_t max_bytes = num_bytes_from_hex(strlen(in1s));
-	byte* in1 = calloc(max_bytes, sizeof(byte));
-	byte* in2 = calloc(max_bytes, sizeof(byte));
+	char* in1 = calloc(max_bytes, 1);
+	char* in2 = calloc(max_bytes, 1);
 	size_t num_bytes = hex_to_bytes(in1s, in1, max_bytes);
 	hex_to_bytes(in2s, in2, max_bytes);
 

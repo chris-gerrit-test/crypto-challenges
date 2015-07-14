@@ -7,14 +7,14 @@
 int main() {
 	char encrypted[] = "1b37373331363f78151b7f2b783431333d78397828372d363c78373e783a393b3736";
 	size_t max_bytes = num_bytes_from_hex(strlen(encrypted));
-	byte* c = calloc(max_bytes + 1, sizeof(byte));
+	char* c = calloc(max_bytes + 1, 1);
 	size_t num_bytes = hex_to_bytes(encrypted, c, max_bytes);
 	c[num_bytes] = '\0';  // turn into a cstring
 
 	double best_score = -1.0;
-	byte best_key = 0;
+	char best_key = 0;
     for (int i = 0; i < 256; i++) {
-    	byte k = i;
+    	char k = i;
     	repeated_xor(c, num_bytes, &k, 1, c);
     	double score = score_text((char*)c, num_bytes);
     	if (score > best_score) {

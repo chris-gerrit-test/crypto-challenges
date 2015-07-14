@@ -16,13 +16,13 @@ int main() {
             --len;
         }
         size_t max_bytes = num_bytes_from_hex(len);
-        byte *c = calloc(max_bytes + 1, sizeof(byte));
+        char *c = calloc(max_bytes + 1, 1);
         size_t num_bytes = hex_to_bytes(line, c, max_bytes);
         c[num_bytes] = '\0';  // turn into a cstring
         int found_best_key = 0;
-        byte best_key = -1;
+        char best_key = -1;
         for (int i = 0; i < 256; i++) {
-            byte k = i;
+            char k = i;
             repeated_xor(c, num_bytes, &k, 1, c);
             double score = score_text((char*)c, num_bytes);
             if (score > best_score) {

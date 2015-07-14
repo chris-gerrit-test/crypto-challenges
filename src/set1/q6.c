@@ -5,7 +5,7 @@
 #include "score.c"
 
 int main() {
-    char* doc = calloc(1, sizeof(char));
+    char* doc = calloc(1, 1);
     size_t doc_len = 0;
     char* line = NULL;
     size_t n = 0;
@@ -18,7 +18,7 @@ int main() {
     }
     
     size_t num_bytes = num_bytes_from_base64(doc_len);
-    byte* as_bytes = calloc(num_bytes + 1, sizeof(byte));
+    char* as_bytes = calloc(num_bytes + 1, 1);
     num_bytes = base64_to_bytes(doc, as_bytes, num_bytes);
     as_bytes[num_bytes] = '\0';
 
@@ -27,10 +27,10 @@ int main() {
     // Start at 10 because my score gets false positives at 5 and 9.
     for (int k = 10; k <= 40; ++k) {
     	double hamming = 1.0 * (
-    		hamming_distance_n((char*)as_bytes, (char*)as_bytes + k, k)
-    		+ hamming_distance_n((char*)as_bytes, (char*)as_bytes + 2 * k, k)
-    		+ hamming_distance_n((char*)as_bytes + 3 * k, (char*)as_bytes + 4 * k, k)
-    		+ hamming_distance_n((char*)as_bytes + 3 * k, (char*)as_bytes + 5 * k, k)) / k;
+    		hamming_distance_n(as_bytes, as_bytes + k, k)
+    		+ hamming_distance_n(as_bytes, as_bytes + 2 * k, k)
+    		+ hamming_distance_n(as_bytes + 3 * k, as_bytes + 4 * k, k)
+    		+ hamming_distance_n(as_bytes + 3 * k, as_bytes + 5 * k, k)) / k;
     	if (hamming < best_hamming) {
     		best_hamming = hamming;
     		best_keysize = k;
@@ -40,18 +40,18 @@ int main() {
     printf("Best keysize: %d: (score %.4f)\n", best_keysize, best_hamming);
 
     size_t col_size = num_bytes / best_keysize;
-    byte* col = calloc(col_size, sizeof(byte));
-    char* key = calloc(best_keysize, sizeof(char));
+    char* col = calloc(col_size, 1);
+    char* key = calloc(best_keysize, 1);
     for (int i = 0; i < best_keysize; ++i) {
     	for (size_t j = 0; j < col_size; ++j) {
     		col[j] = as_bytes[j * best_keysize + i];
     	}
 		double best_score = -1.0;
-		byte best_key = 0;
+		char best_key = 0;
 	    for (int h = 0; h < 256; h++) {
-	    	byte k = h;
+	    	char k = h;
 	    	repeated_xor(col, col_size, &k, 1, col);
-	    	double score = score_text((char*)col, col_size);
+	    	double score = score_text(col, col_size);
 	    	if (score > best_score) {
 	    		best_key = k;
 	    		best_score = score;
@@ -64,7 +64,7 @@ int main() {
 
     printf("Key: %s\n", key);
 
-    repeated_xor(as_bytes, num_bytes, (byte*)key, best_keysize, as_bytes);
+    repeated_xor(as_bytes, num_bytes, key, best_keysize, as_bytes);
     printf("Decoded: %s\n", as_bytes);
 
     free(as_bytes);

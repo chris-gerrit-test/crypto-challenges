@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-typedef uint8_t byte;
-
 char hex_digits[16] = {
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 };
@@ -12,7 +10,7 @@ char hex_digits[16] = {
 /*
 	The byte's two high bits will be ignored.
 */
-char byte_to_base64_digit(byte b) {
+char byte_to_base64_digit(char b) {
 	b = b & 0x3f;
 	if (b < 26) return 'A' + b;
 	if (b < 52) return 'a' + (b - 26);
@@ -20,7 +18,7 @@ char byte_to_base64_digit(byte b) {
 	return b == 62 ? '=' : '/';
 }
 
-byte base64_digit_to_byte(char digit) {
+char base64_digit_to_byte(char digit) {
 	if (digit >= 'A' && digit <= 'Z') {
 		return digit - 'A';
 	}
@@ -50,7 +48,7 @@ int num_bytes_from_base64(size_t num_base64_digits) {
 	return ((num_base64_digits + 3) / 4) * 3;
 }
 
-int bytes_to_base64(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
+int bytes_to_base64(char *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 	size_t num_chars = num_base64_digits(num_bytes);  // 4 base64 chars fit in 3 bytes
 	if (num_chars + 1 > buf_size) {
 		return -1;
@@ -86,21 +84,21 @@ int bytes_to_base64(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 	return num_chars;
 }
 
-int bytes_to_hex(byte *bytes, size_t num_bytes, char *buf, size_t buf_size) {
+int bytes_to_hex(char *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 	size_t num_chars = num_hex_digits(num_bytes);
 	if (num_chars + 1 > buf_size) {
 		return -1;
 	}
 	buf[num_chars] = '\0';
 	for (size_t i = 0; i < num_bytes; i++) {
-		byte b = bytes[i];
+		char b = bytes[i];
 		buf[2 * i] = hex_digits[b >> 4];
 		buf[2 * i + 1] = hex_digits[b & 0xf];
 	}
 	return num_chars;
 }
 
-int base64_to_bytes(char* base64, byte *buf, size_t buf_size) {
+int base64_to_bytes(char* base64, char *buf, size_t buf_size) {
 	size_t num_chars = strlen(base64);
 	size_t max_num_bytes = num_bytes_from_base64(num_chars);
 	if (max_num_bytes > buf_size) {
@@ -137,7 +135,7 @@ int base64_to_bytes(char* base64, byte *buf, size_t buf_size) {
 	return num_bytes;
 }
 
-int hex_to_bytes(char* hex, byte *buf, size_t buf_size) {
+int hex_to_bytes(char* hex, char *buf, size_t buf_size) {
 	size_t num_chars = strlen(hex);
 	size_t num_bytes = num_bytes_from_hex(num_chars);
 	if (num_bytes > buf_size) {
@@ -162,7 +160,7 @@ int hex_to_bytes(char* hex, byte *buf, size_t buf_size) {
 	return num_bytes;
 }
 
-void print_bytes(byte* bytes, size_t num_bytes) {
+void print_bytes(char* bytes, size_t num_bytes) {
 	printf("Printing %zd bytes:", num_bytes);
 	for (size_t i = 0; i < num_bytes; i++) {
 		printf(" %u", bytes[i]);
