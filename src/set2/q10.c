@@ -22,5 +22,9 @@ int main() {
 
     char *iv = calloc(16, 1);
     cbc_decrypt(as_bytes, as_bytes, num_bytes, iv, "YELLOW SUBMARINE");
+    cbc_encrypt(as_bytes, as_bytes, num_bytes, iv, "YELLOW SUBMARINE");
+    cbc_decrypt(as_bytes, as_bytes, num_bytes, iv, "YELLOW SUBMARINE");
+    aes_encrypt(as_bytes, as_bytes, num_bytes, "YELLOW SUBMARINE");
+    aes_decrypt(as_bytes, as_bytes, num_bytes, "YELLOW SUBMARINE");
     printf("%s\n", as_bytes);
 }

@@ -28,6 +28,14 @@ void aes_decrypt(char *encrypted, char *decrypted, size_t num_bytes, char *key) 
     }
 }
 
+void aes_encrypt(char *decrypted, char *encrypted, size_t num_bytes, char *key) {
+    AES_KEY aes_key;
+    AES_set_encrypt_key((unsigned char*)key, 128, &aes_key);
+    for (size_t offset = 0; offset < num_bytes; offset += 16) {
+        AES_encrypt((unsigned char*)decrypted + offset, (unsigned char*)encrypted + offset, &aes_key);
+    }
+}
+
 void cbc_decrypt(char *encrypted, char *decrypted, size_t num_bytes, char *iv, char *key) {
     AES_KEY aes_key;
     AES_set_decrypt_key((unsigned char*)key, 128, &aes_key);
@@ -39,5 +47,17 @@ void cbc_decrypt(char *encrypted, char *decrypted, size_t num_bytes, char *iv, c
         AES_decrypt((unsigned char*)encrypted + offset, (unsigned char*)decrypted + offset, &aes_key);
     	xor(decrypted + offset, prev, 16, decrypted + offset);
         memcpy(prev, buf, 16);
+    }
+}
+
+void cbc_encrypt(char *decrypted, char *encrypted, size_t num_bytes, char *iv, char *key) {
+    AES_KEY aes_key;
+    AES_set_encrypt_key((unsigned char*)key, 128, &aes_key);
+    char buf[16];
+    for (size_t offset = 0; offset < num_bytes; offset += 16) {
+    	memcpy(buf, decrypted + offset, 16);
+    	xor(buf, iv, 16, buf);
+        AES_encrypt((unsigned char*)buf, (unsigned char*)encrypted + offset, &aes_key);
+        iv = encrypted + offset;
     }
 }
