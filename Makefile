@@ -47,8 +47,12 @@ q10:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set2/q10.c -o bin/q10
 	bin/q10 < data/set2/10.txt
 
+q11:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set2/q11.c -o bin/q11
+	bin/q11
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
-set2: q9 q10
+set2: q9 q10 q11
 
 all: set1 set2

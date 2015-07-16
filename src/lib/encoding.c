@@ -163,7 +163,7 @@ int hex_to_bytes(char* hex, char *buf, size_t buf_size) {
 void print_bytes(char* bytes, size_t num_bytes) {
 	printf("Printing %zd bytes:", num_bytes);
 	for (size_t i = 0; i < num_bytes; i++) {
-		printf(" %u", bytes[i]);
+		printf(" %d", bytes[i]);
 	}
 	printf("\n");
 }
