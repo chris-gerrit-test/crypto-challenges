@@ -55,6 +55,10 @@ q12:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set2/q12.c -o bin/q12
 	bin/q12
 
+q13:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set2/q13.c -o bin/q13
+	bin/q13
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12
