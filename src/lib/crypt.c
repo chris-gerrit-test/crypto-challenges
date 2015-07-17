@@ -20,6 +20,22 @@ int pkcs7(char *buf, size_t buf_size, size_t block_size) {
 	return -1;
 }
 
+char *strip_pkcs7(char *buf, size_t buf_size, size_t block_size) {
+    if (buf_size % block_size != 0) {
+        return NULL;
+    }
+    int padding_length = buf[buf_size - 1];
+    if (padding_length <= 0 || (size_t)padding_length > block_size) {
+        return NULL;
+    }
+    for (int i = 1; i < padding_length; ++i) {
+        if (buf[buf_size - i - 1] != padding_length) {
+            return NULL;
+        }
+    }
+    return buf + buf_size - padding_length;
+}
+
 void aes_decrypt(char *encrypted, char *decrypted, size_t num_bytes, char *key) {
     AES_KEY aes_key;
     AES_set_decrypt_key((unsigned char*)key, 128, &aes_key);
