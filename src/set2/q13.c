@@ -49,6 +49,7 @@ char *encode_profile(profile *pr, size_t *n) {
             *p++ = '&';
         }
     }
+    pkcs7(out, *n, 16);
     *p = '\0';
     //printf("profile:%s\n", out);
     aes_encrypt(out, out, *n, key);
@@ -64,7 +65,6 @@ char *profile_for(char *email, size_t *n) {
 }
 
 int main() {
-    // TODO: go back and make a better solution with padding
     srand(19);
     for (size_t i = 0; i < sizeof(key); ++i) {
         key[i] = randn(256) - 128;
@@ -73,7 +73,7 @@ int main() {
     size_t n1 = 0;
     char *s1 = profile_for(
         "0123456789"        // end current block (starts with email=)
-        "admin", &n1);
+        "admin\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b\x0b", &n1);
 
     size_t n2 = 0;
     char *s2 = profile_for("0123456789012", &n2);
@@ -83,6 +83,8 @@ int main() {
     memcpy(attack + 32, s1 + 16, 16);
 
     aes_decrypt(attack, attack, 48, key);
+    char *end = strip_pkcs7(attack, 48, 16);
+    if (end) *end = '\0';
     printf("%s\n", attack);
 
     free(s1);
