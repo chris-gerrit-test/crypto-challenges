@@ -23,6 +23,6 @@ int main() {
 
     char *s = calloc(32, 1);
     memcpy(s, "YELLOW SUBMARINE", 16);
-    pkcs7(s, 17, 16);
+    pkcs7(s, 32, 16);
     check_padding(s);
 }
