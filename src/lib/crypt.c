@@ -1,3 +1,6 @@
+#ifndef CRYPT_C
+#define CRYPT_C
+
 #include <string.h>
 #include <openssl/aes.h>
 
@@ -102,7 +105,6 @@ void ctr_crypt(char *decrypted, char *encrypted, size_t num_bytes, char *nonce, 
     for (size_t offset = 0; offset < num_bytes; offset += 16) {
         memcpy(buf, nonce, 8);
         memcpy(buf + 8, counter, 8);
-        xor(buf, nonce, 16, buf);
         AES_encrypt((unsigned char*)buf, (unsigned char*)buf, &aes_key);
         size_t n = 16;
         if (offset + n > num_bytes) {
@@ -112,3 +114,5 @@ void ctr_crypt(char *decrypted, char *encrypted, size_t num_bytes, char *nonce, 
         inc_counter_le(counter, 8);
     }
 }
+
+#endif /* CRYPT_C */

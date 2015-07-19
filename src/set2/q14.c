@@ -63,7 +63,6 @@ void find_unknown_string(size_t bs) {
         // e.g. if i is 3 (4th byte) and bs is 16 then we need 12
         // bytes of kkkk prefix, plus the 3 bytes we already know.
         size_t prefix_len = (bs - i - 1) % bs;
-        size_t skip_blocks = (prefix_len + i) / 16;
         size_t n = i + prefix_len + num_suffix_bytes + max_prefix_bytes;
         if (n % bs != 0) {
             n = n + bs - (n % bs);

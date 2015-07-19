@@ -1,3 +1,6 @@
+#ifndef MATH_C
+#define MATH_C
+
 #include <stdlib.h>
 
 void xor(char* in1, char *in2, size_t num_bytes, char *out) {
@@ -16,3 +19,5 @@ int randn(int n) {
 	// Not uniform, but okay for our purposes
 	return rand() % n;
 }
+
+#endif /* MATH_C */

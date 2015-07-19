@@ -1,3 +1,6 @@
+#ifndef SCORE_C
+#define SCORE_C
+
 #include <ctype.h>
 
 double letter_scores[] = {
@@ -33,3 +36,5 @@ int hamming_distance_n(char* str1, char* str2, size_t len) {
 	}
 	return d;
 }
+
+#endif /* SCORE_C */

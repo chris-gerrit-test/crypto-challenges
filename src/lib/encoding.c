@@ -1,3 +1,6 @@
+#ifndef ENCODING_C
+#define ENCODING_C
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -168,3 +171,5 @@ void print_bytes(char* bytes, size_t num_bytes) {
 	}
 	printf("\n");
 }
+
+#endif /* ENCODING_C */
