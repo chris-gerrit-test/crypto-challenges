@@ -71,9 +71,44 @@ void cbc_encrypt(char *decrypted, char *encrypted, size_t num_bytes, char *iv, c
     AES_set_encrypt_key((unsigned char*)key, 128, &aes_key);
     char buf[16];
     for (size_t offset = 0; offset < num_bytes; offset += 16) {
-    	memcpy(buf, decrypted + offset, 16);
-    	xor(buf, iv, 16, buf);
+        memcpy(buf, decrypted + offset, 16);
+        xor(buf, iv, 16, buf);
         AES_encrypt((unsigned char*)buf, (unsigned char*)encrypted + offset, &aes_key);
         iv = encrypted + offset;
+    }
+}
+
+void inc_counter_be(char *counter, size_t size) {
+    int carry = 1;
+    for (int i = size - 1; carry && i >= 0; --i) {
+        counter[i] += 1;
+        carry = !((unsigned char)counter[i]);
+    }
+}
+
+void inc_counter_le(char *counter, size_t size) {
+    int carry = 1;
+    for (size_t i = 0; carry && i < size; ++i) {
+        counter[i] += 1;
+        carry = !((unsigned char)counter[i]);
+    }
+}
+
+void ctr_crypt(char *decrypted, char *encrypted, size_t num_bytes, char *nonce, char *key) {
+    char counter[8] = {0};
+    AES_KEY aes_key;
+    AES_set_encrypt_key((unsigned char*)key, 128, &aes_key);
+    char buf[16];
+    for (size_t offset = 0; offset < num_bytes; offset += 16) {
+        memcpy(buf, nonce, 8);
+        memcpy(buf + 8, counter, 8);
+        xor(buf, nonce, 16, buf);
+        AES_encrypt((unsigned char*)buf, (unsigned char*)buf, &aes_key);
+        size_t n = 16;
+        if (offset + n > num_bytes) {
+            n = num_bytes - offset;
+        }
+        xor(buf, decrypted + offset, n, encrypted + offset);
+        inc_counter_le(counter, 8);
     }
 }
