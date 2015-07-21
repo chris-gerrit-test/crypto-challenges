@@ -166,7 +166,7 @@ int hex_to_bytes(char* hex, char *buf, size_t buf_size) {
 void print_bytes(char* bytes, size_t num_bytes) {
 	printf("Printing %zd bytes:\n", num_bytes);
 	for (size_t i = 0; i < num_bytes; i++) {
-		printf(" %3d", (unsigned char)bytes[i]);
+		printf(" %02x", (unsigned char)bytes[i]);
 		if (i % 16 == 15 && i < num_bytes - 1) printf("\n");
 	}
 	printf("\n");

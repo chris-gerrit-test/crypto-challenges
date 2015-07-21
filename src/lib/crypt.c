@@ -5,6 +5,7 @@
 #include <openssl/aes.h>
 
 #include "math.c"
+#include "mersenne.c"
 
 int pkcs7(char *buf, size_t buf_size, size_t block_size) {
 	for (size_t i = 0; i < buf_size; ++i) {
@@ -112,6 +113,14 @@ void ctr_crypt(char *decrypted, char *encrypted, size_t num_bytes, char *nonce, 
         }
         xor(buf, decrypted + offset, n, encrypted + offset);
         inc_counter_le(counter, 8);
+    }
+}
+
+void mersenne_crypt(char *decrypted, char *encrypted, size_t num_bytes, uint16_t seed) {
+    twister mt;
+    mt_seed(&mt, seed);
+    for (size_t offset = 0; offset < num_bytes; ++offset) {
+        encrypted[offset] = decrypted[offset] ^ mt_extract(&mt);
     }
 }
 
