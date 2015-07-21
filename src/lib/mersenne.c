@@ -13,7 +13,6 @@ uint32_t m = 397;
 uint32_t r = MERSENNE_C_R;
 uint32_t a = 0x9908B0DF;
 uint32_t u = 11;
-uint32_t d = 0xFFFFFFFF;
 uint32_t s = 7;
 uint32_t b = 0x9D2C5680;
 uint32_t t = 15;
@@ -54,11 +53,19 @@ uint32_t mt_extract(twister *mt) {
     }
 
     uint32_t y = mt->state[mt->index];
-    y ^= ((y >> u) & d);
+    y ^= (y >> u);
     y ^= ((y << s) & b);
     y ^= ((y << t) & c);
     y ^= (y >> l);
     mt->index++;
+    return y;
+}
+
+uint32_t untemper(uint32_t y) {
+    y ^= (y >> l);
+    y ^= ((y << t) & c);
+    y = y ^ ((y ^ ((y ^ ((y ^ (y << s) & b) << s) & b) << s) & b) << s) & b;
+    y = y ^ ((y ^ (y >> u)) >> u);
     return y;
 }
 
