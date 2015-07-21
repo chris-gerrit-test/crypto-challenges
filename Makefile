@@ -87,10 +87,14 @@ q20:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set3/q20.c -o bin/q20
 	bin/q20
 
+q21:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set3/q21.c -o bin/q21
+	bin/q21
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
 
-set3: q17 q18 q19 q20
+set3: q17 q18 q19 q20 q21
 
 all: set1 set2 set3
