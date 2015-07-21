@@ -167,7 +167,7 @@ void print_bytes(char* bytes, size_t num_bytes) {
 	printf("Printing %zd bytes:\n", num_bytes);
 	for (size_t i = 0; i < num_bytes; i++) {
 		printf(" %3d", (unsigned char)bytes[i]);
-		if (i % 16 == 15) printf("\n");
+		if (i % 16 == 15 && i < num_bytes - 1) printf("\n");
 	}
 	printf("\n");
 }
