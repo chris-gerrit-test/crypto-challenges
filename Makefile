@@ -111,12 +111,16 @@ q26:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set4/q26.c -o bin/q26
 	bin/q26
 
+q27:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set4/q27.c -o bin/q27
+	bin/q27
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
 
 set3: q17 q18 q19 q20 q21 q22 q23 q24
 
-set4: q25 q26
+set4: q25 q26 q27
 
 all: set1 set2 set3 set4
