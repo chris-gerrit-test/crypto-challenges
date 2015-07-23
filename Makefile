@@ -103,10 +103,16 @@ q24:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set3/q24.c -o bin/q24
 	bin/q24
 
+q25:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set4/q25.c -o bin/q25
+	bin/q25 < data/set1/7.txt
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
 
 set3: q17 q18 q19 q20 q21 q22 q23 q24
 
-all: set1 set2 set3
+set4: q25
+
+all: set1 set2 set3 set4
