@@ -6,6 +6,7 @@
 
 #include "math.c"
 #include "mersenne.c"
+#include "sha1.h"
 
 int pkcs7(char *buf, size_t buf_size, size_t block_size) {
 	for (size_t i = 0; i < buf_size; ++i) {
@@ -125,11 +126,11 @@ void mersenne_crypt(char *decrypted, char *encrypted, size_t num_bytes, uint16_t
 }
 
 void sha1_mac(char *key, size_t key_size, char *message, size_t message_size, char *mac) {
-    char *s = calloc(key_size + message_size, 1);
-    memcpy(s, key, key_size);
-    memcpy(s + key_size, message, message_size);
-    SHA1((unsigned char*) s, key_size + message_size, (unsigned char*)mac);
-    free(s);
+    SHA1Context ctx;
+    SHA1Reset(&ctx);
+    SHA1Input(&ctx, (uint8_t *)key, key_size);
+    SHA1Input(&ctx, (uint8_t *)message, message_size);
+    SHA1Result(&ctx, (uint8_t *)mac);
 }
 
 #endif /* CRYPT_C */
