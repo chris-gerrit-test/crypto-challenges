@@ -124,4 +124,12 @@ void mersenne_crypt(char *decrypted, char *encrypted, size_t num_bytes, uint16_t
     }
 }
 
+void sha1_mac(char *key, size_t key_size, char *message, size_t message_size, char *mac) {
+    char *s = calloc(key_size + message_size, 1);
+    memcpy(s, key, key_size);
+    memcpy(s + key_size, message, message_size);
+    SHA1((unsigned char*) s, key_size + message_size, (unsigned char*)mac);
+    free(s);
+}
+
 #endif /* CRYPT_C */
