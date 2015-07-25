@@ -4,6 +4,7 @@
 #include <string.h>
 #include <openssl/aes.h>
 
+#include "encoding.c"
 #include "math.c"
 #include "mersenne.c"
 #include "sha1.h"
@@ -127,10 +128,23 @@ void mersenne_crypt(char *decrypted, char *encrypted, size_t num_bytes, uint16_t
 
 void sha1_mac(char *key, size_t key_size, char *message, size_t message_size, char *mac) {
     SHA1Context ctx;
-    SHA1Reset(&ctx);
-    SHA1Input(&ctx, (uint8_t *)key, key_size);
-    SHA1Input(&ctx, (uint8_t *)message, message_size);
-    SHA1Result(&ctx, (uint8_t *)mac);
+    assert(shaSuccess == SHA1Reset(&ctx));
+    assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)key, key_size));
+    assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)message, message_size));
+    // printf("Before:\n");
+    // for (int i = 0; i < 5; ++i) {
+    //     printf("%x\n", ctx.Intermediate_Hash[i]);
+    // }
+    assert(shaSuccess == SHA1Result(&ctx, (uint8_t *)mac));
+    // printf("After:\n");
+    // for (int i = 0; i < 5; ++i) {
+    //     printf("%x\n", ctx.Intermediate_Hash[i]);
+    // }
+    // unsigned char *s = calloc(20, 1);
+    // for (int i = 0; i < 20; ++i) {
+    //     s[i] = (ctx.Intermediate_Hash[i / 4] >> (8 * (3 - (i % 4)))) & 0xff;
+    // }
+    // print_bytes((char *)s, 20);
 }
 
 #endif /* CRYPT_C */
