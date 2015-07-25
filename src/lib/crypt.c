@@ -131,20 +131,7 @@ void sha1_mac(char *key, size_t key_size, char *message, size_t message_size, ch
     assert(shaSuccess == SHA1Reset(&ctx));
     assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)key, key_size));
     assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)message, message_size));
-    // printf("Before:\n");
-    // for (int i = 0; i < 5; ++i) {
-    //     printf("%x\n", ctx.Intermediate_Hash[i]);
-    // }
     assert(shaSuccess == SHA1Result(&ctx, (uint8_t *)mac));
-    // printf("After:\n");
-    // for (int i = 0; i < 5; ++i) {
-    //     printf("%x\n", ctx.Intermediate_Hash[i]);
-    // }
-    // unsigned char *s = calloc(20, 1);
-    // for (int i = 0; i < 20; ++i) {
-    //     s[i] = (ctx.Intermediate_Hash[i / 4] >> (8 * (3 - (i % 4)))) & 0xff;
-    // }
-    // print_bytes((char *)s, 20);
 }
 
 #endif /* CRYPT_C */

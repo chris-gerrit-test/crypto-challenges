@@ -344,7 +344,6 @@ void SHA1PadMessage(SHA1Context *context)
      *  block, process it, and then continue padding into a second
      *  block.
      */
-     printf("context->Message_Block_Index=%d\n", context->Message_Block_Index);
     if (context->Message_Block_Index > 55)
     {
         context->Message_Block[context->Message_Block_Index++] = 0x80;
@@ -372,8 +371,6 @@ void SHA1PadMessage(SHA1Context *context)
     /*
      *  Store the message length as the last 8 octets
      */
-     printf("context->Length_High=%d\n", context->Length_High);
-     printf("context->Length_Low=%d\n", context->Length_Low);
     context->Message_Block[56] = context->Length_High >> 24;
     context->Message_Block[57] = context->Length_High >> 16;
     context->Message_Block[58] = context->Length_High >> 8;
