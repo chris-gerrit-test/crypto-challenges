@@ -6,6 +6,7 @@
 
 #include "encoding.c"
 #include "math.c"
+#include "md4.h"
 #include "mersenne.c"
 #include "sha1.h"
 
@@ -132,6 +133,14 @@ void sha1_mac(char *key, size_t key_size, char *message, size_t message_size, ch
     assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)key, key_size));
     assert(shaSuccess == SHA1Input(&ctx, (uint8_t *)message, message_size));
     assert(shaSuccess == SHA1Result(&ctx, (uint8_t *)mac));
+}
+
+void md4_mac(char *key, size_t key_size, char *message, size_t message_size, char *mac) {
+    MD4_CTX ctx;
+    MD4Init(&ctx);
+    MD4Update(&ctx, (uint8_t *)key, key_size);
+    MD4Update(&ctx, (uint8_t *)message, message_size);
+    MD4Final((uint8_t *)mac, &ctx);
 }
 
 #endif /* CRYPT_C */

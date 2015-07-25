@@ -4,7 +4,7 @@ INCLUDE=src/lib/
 
 LIBCRYPTO=/usr/lib/libcrypto.dylib
 
-LIB_SRC=src/lib/sha1.c
+LIB_SRC=src/lib/sha1.c src/lib/md4.c
 
 # libcrypto is deprecated on Mac OS X
 CFLAGS=-W -Wall -Wno-deprecated-declarations -std=c99 -g
@@ -125,12 +125,16 @@ q29:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set4/q29.c $(LIB_SRC) -o bin/q29
 	bin/q29
 
+q30:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set4/q30.c $(LIB_SRC) -o bin/q30
+	bin/q30
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
 
 set3: q17 q18 q19 q20 q21 q22 q23 q24
 
-set4: q25 q26 q27 q28 q29
+set4: q25 q26 q27 q28 q29 q30
 
 all: set1 set2 set3 set4
