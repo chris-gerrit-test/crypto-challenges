@@ -94,7 +94,7 @@ int bytes_to_hex(char *bytes, size_t num_bytes, char *buf, size_t buf_size) {
 	}
 	buf[num_chars] = '\0';
 	for (size_t i = 0; i < num_bytes; i++) {
-		char b = bytes[i];
+		unsigned char b = bytes[i];
 		buf[2 * i] = hex_digits[b >> 4];
 		buf[2 * i + 1] = hex_digits[b & 0xf];
 	}
