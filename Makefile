@@ -2,7 +2,7 @@ CC=gcc
 
 INCLUDE=src/lib/
 
-LIBCRYPTO=/usr/lib/libcrypto.dylib
+LIBCRYPTO=-lcrypto
 
 LIB_SRC=src/lib/sha1.c src/lib/md4.c
 

@@ -1,6 +1,7 @@
 #ifndef CRYPT_C
 #define CRYPT_C
 
+#include <assert.h>
 #include <string.h>
 #include <openssl/aes.h>
 
