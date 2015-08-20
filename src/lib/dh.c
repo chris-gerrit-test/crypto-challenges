@@ -27,7 +27,7 @@ void init_dh() {
 	dh_inited = 1;
 
     gmp_randinit_default(rand_state);
-    gmp_randseed_ui(rand_state, 0);
+    gmp_randseed_ui(rand_state, 54);
 }
 
 struct dh_key new_NIST_dh_key() {
