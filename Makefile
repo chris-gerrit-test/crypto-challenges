@@ -142,6 +142,10 @@ q33:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBGMP) src/set5/q33.c $(LIB_SRC) -o bin/q33
 	bin/q33
 
+q34:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBGMP) $(LIBCRYPTO) src/set5/q34.c $(LIB_SRC) -o bin/q34
+	bin/q34
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
@@ -150,6 +154,6 @@ set3: q17 q18 q19 q20 q21 q22 q23 q24
 
 set4: q25 q26 q27 q28 q29 q30 q31 q32
 
-set5: q33
+set5: q33 q34
 
 all: set1 set2 set3 set4 set5
