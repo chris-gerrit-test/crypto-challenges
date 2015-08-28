@@ -184,6 +184,10 @@ q51:
 	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBZ) $(LIBCRYPTO) src/set7/q51.c $(LIB_SRC) -o bin/q51
 	bin/q51
 
+q52:
+	$(CC) $(CFLAGS) -I $(INCLUDE) $(LIBCRYPTO) src/set7/q52.c $(LIB_SRC) -o bin/q52
+	bin/q52
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
@@ -194,6 +198,6 @@ set4: q25 q26 q27 q28 q29 q30 q31 q32
 
 set5: q33 q34 q35 q36 q37 q38 q39 q40
 
-set7: q49 q50 q51
+set7: q49 q50 q51 q52
 
 all: set1 set2 set3 set4 set5

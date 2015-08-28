@@ -86,6 +86,16 @@ void cbc_encrypt(char *decrypted, char *encrypted, size_t num_bytes, char *iv, c
     }
 }
 
+long long unsigned be_counter_val(char *counter, size_t size) {
+    long long unsigned result = 0;
+
+    for (size_t i = 0; i < size; ++i) {
+        result = result * 256 + (unsigned char)counter[i];
+    }
+
+    return result;
+}
+
 void inc_counter_be(char *counter, size_t size) {
     int carry = 1;
     for (int i = size - 1; carry && i >= 0; --i) {
