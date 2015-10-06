@@ -15,9 +15,9 @@ void compute_mac(char *msg, char iv[16], char mac[16]) {
 
     len = strlen(msg);
     len = (1 + len / 16) * 16;  // make sure there is room for padding
-    c = calloc(len, 1);
+    c = calloc(len + 1, 1);
     strcpy(c, msg);
-    assert(-1 != pkcs7(c, len, 16));
+    assert(-1 != pkcs7(c, len + 1, 16));
     cbc_encrypt(c, c, len, iv, key);
     memcpy(mac, c + len - 16, 16);
     free(c);
