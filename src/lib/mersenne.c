@@ -5,7 +5,7 @@
 
 #define MERSENNE_C_N 624
 #define MERSENNE_C_R 31
-#define MERSENNE_C_LOWER_MASK ((1 << MERSENNE_C_R) - 1)
+#define MERSENNE_C_LOWER_MASK ((uint32_t)(1 << MERSENNE_C_R) - 1)
 
 uint32_t w = 32;
 uint32_t n = MERSENNE_C_N;
