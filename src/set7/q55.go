@@ -112,6 +112,7 @@ func Correct(m []byte) {
 		a += f + X[x]
 		a = a<<s | a>>(32-s)
 		if i == 0 {
+			// Correct for a1 constraint
 			ac := a ^ ((a & 0x40) ^ (b & 0x40))
 			Xc[0] = (ac>>s | ac<<(32-s)) - a0 - f
 		}
@@ -119,6 +120,10 @@ func Correct(m []byte) {
 	}
 
 	//c4 := c
+
+    func correct(i uint32) {
+        
+    }
 
 	// Round 2.
 	for i := uint(0); i < 16; i++ {
