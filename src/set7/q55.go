@@ -62,8 +62,10 @@ func CheckConditions(m []byte) bool {
 				return false
 			}
 			//log.Printf("Condition c1: %t", cond)
-			// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
-			//log.Printf("Condition b1: %t", cond)
+			cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
+			if !cond {
+				log.Printf("Condition b1: %t", cond)
+			}
 		}
 	}
 
