@@ -69,6 +69,11 @@ func CheckConditions(m []byte) {
 				(a&0x4000000 == 0) &&
 				(a&0x10000000 == 0x10000000) &&
 				(a&0x80000000 == 0x80000000))
+			log.Printf("Condition a5.1: %t", a&0x40000 == c4&0x40000)
+			log.Printf("Condition a5.2: %t", a&0x2000000 == 0x2000000)
+			log.Printf("Condition a5.3: %t", a&0x4000000 == 0)
+			log.Printf("Condition a5.4: %t", a&0x10000000 == 0x10000000)
+			log.Printf("Condition a5.5: %t", a&0x80000000 == 0x80000000)
 			log.Printf("Condition a5: %t", cond)
 		}
 	}
@@ -85,9 +90,13 @@ func CheckConditions(m []byte) {
 
 }
 
-func Correct(m []byte) {
+func rrot(n uint32, r uint) uint32 {
+	return (n >> r) | n<<(32-r)
+}
+
+func Correct(m []byte, cond uint32) {
 	a, b, c, d := uint32(0x67452301), uint32(0xEFCDAB89), uint32(0x98BADCFE), uint32(0x10325476)
-	a0 := a
+	ap, bp, cp, dp := uint32(0x67452301), uint32(0xEFCDAB89), uint32(0x98BADCFE), uint32(0x10325476)
 
 	var X [16]uint32
 	var Xp [16]uint32
@@ -104,6 +113,24 @@ func Correct(m []byte) {
 	Xp[2] = X[2] + 0x80000000 - 0x10000000
 	Xp[12] = X[12] - 0x10000
 
+	var A [9]uint32
+	var B [9]uint32
+	var C [9]uint32
+	var D [9]uint32
+	var Ap [9]uint32
+	var Bp [9]uint32
+	var Cp [9]uint32
+	var Dp [9]uint32
+
+	A[0] = a
+	B[0] = b
+	C[0] = c
+	D[0] = d
+
+	F := func(b, c, d uint32) uint32 {
+		return ((c ^ d) & b) ^ d
+	}
+
 	// Round 1.
 	for i := uint(0); i < 16; i++ {
 		x := i
@@ -111,19 +138,35 @@ func Correct(m []byte) {
 		f := ((c ^ d) & b) ^ d
 		a += f + X[x]
 		a = a<<s | a>>(32-s)
-		if i == 0 {
-			// Correct for a1 constraint
-			ac := a ^ ((a & 0x40) ^ (b & 0x40))
-			Xc[0] = (ac>>s | ac<<(32-s)) - a0 - f
-		}
+
 		a, b, c, d = d, a, b, c
+		if i%4 == 3 {
+			A[i/4+1] = a
+			B[i/4+1] = b
+			C[i/4+1] = c
+			D[i/4+1] = d
+		}
 	}
+	for i := uint(0); i < 16; i++ {
+		x := i
+		s := shift1[i%4]
+		f := ((cp ^ dp) & bp) ^ dp
+		ap += f + Xp[x]
+		ap = ap<<s | ap>>(32-s)
 
-	//c4 := c
-
-    func correct(i uint32) {
-        
-    }
+		ap, bp, cp, dp = dp, ap, bp, cp
+		if i%4 == 3 {
+			Ap[i/4+1] = ap
+			Bp[i/4+1] = bp
+			Cp[i/4+1] = cp
+			Dp[i/4+1] = dp
+		}
+	}
+	if cond&0x1 != 0 {
+		log.Printf("Correct a1")
+		ac := A[1] ^ ((A[1] & 0x40) ^ (B[0] & 0x40))
+		Xc[0] = rrot(ac, shift1[0]) - A[0] - F(B[0], C[0], D[0])
+	}
 
 	// Round 2.
 	for i := uint(0); i < 16; i++ {
@@ -133,9 +176,54 @@ func Correct(m []byte) {
 		a += g + X[x] + 0x5a827999
 		a = a<<s | a>>(32-s)
 		a, b, c, d = d, a, b, c
-
-		if i == 3 {
+		if i%4 == 3 {
+			A[i/4+5] = a
+			B[i/4+5] = b
+			C[i/4+5] = c
+			D[i/4+5] = d
 		}
+	}
+	// Correct for a5 constraints
+	type Correction struct {
+		i   uint32
+		add bool
+	}
+	corrections := make([]Correction, 0)
+	aNew := A[1]
+	if cond&0x2 != 0 && A[5]&0x40000 != C[4]&0x40000 {
+		log.Printf("Correct a5.1")
+		corrections = append(corrections, Correction{19, C[4]&0x40000 != 0})
+	}
+	if cond&0x4 != 0 && A[5]&0x2000000 != 0x2000000 {
+		log.Printf("Correct a5.2")
+		corrections = append(corrections, Correction{26, true})
+	}
+	if cond&0x8 != 0 && A[5]&0x4000000 != 0 {
+		log.Printf("Correct a5.3")
+		corrections = append(corrections, Correction{27, false})
+	}
+	if cond&0x10 != 0 && A[5]&0x10000000 != 0x10000000 {
+		log.Printf("Correct a5.4")
+		corrections = append(corrections, Correction{29, true})
+	}
+	if cond&0x20 != 0 && A[5]&0x80000000 != 0x80000000 {
+		log.Printf("Correct a5.5")
+		corrections = append(corrections, Correction{32, true})
+	}
+	for _, corr := range corrections {
+		adj := uint32(1) << (corr.i - 4)
+		mask := uint32(1) << (corr.i - 1)
+		if aNew&mask == 0 {
+			Xc[0] += adj
+			aNew = aNew | mask
+		} else {
+			Xc[0] -= adj
+			aNew = aNew &^ mask
+		}
+		Xc[1] = rrot(D[1], 7) - D[0] - F(aNew, B[0], C[0])
+		Xc[2] = rrot(C[1], 11) - C[0] - F(D[1], aNew, B[0])
+		Xc[3] = rrot(B[1], 19) - B[0] - F(C[1], D[1], aNew)
+		Xc[4] = rrot(A[2], 3) - aNew - F(B[1], C[1], D[1])
 	}
 
 	// Round 3.
@@ -148,10 +236,12 @@ func Correct(m []byte) {
 		a, b, c, d = d, a, b, c
 	}
 
-	m[0] = byte(Xc[0])
-	m[1] = byte(Xc[0] >> 8)
-	m[2] = byte(Xc[0] >> 16)
-	m[3] = byte(Xc[0] >> 24)
+	for i := 0; i < 5; i++ {
+		m[4*i] = byte(Xc[i])
+		m[4*i+1] = byte(Xc[i] >> 8)
+		m[4*i+2] = byte(Xc[i] >> 16)
+		m[4*i+3] = byte(Xc[i] >> 24)
+	}
 }
 
 func main() {
@@ -179,9 +269,15 @@ func main() {
 	// // log.Printf("%x", md1.Sum(nil))
 	// // log.Printf("%x", md2.Sum(nil))
 
-	m := []byte(strings.Repeat("z", 64))
+	m := []byte(strings.Repeat("x", 64))
+	log.Printf("%x", m)
 	CheckConditions(m)
-
-	Correct(m)
+	Correct(m, 1)
+	Correct(m, 2)
+	Correct(m, 4)
+	Correct(m, 8)
+	Correct(m, 16)
+	Correct(m, 32)
+	log.Printf("%x", m)
 	CheckConditions(m)
 }
