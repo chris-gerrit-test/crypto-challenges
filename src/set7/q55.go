@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"log"
+	"math/rand"
 	"strings"
 
 	"github.com/hundt/md4"
@@ -233,30 +234,36 @@ func Correct(m []byte, cond int) {
 			D[i/4+1] = d
 		}
 	}
-	if cond == 1 {
+	if cond == 0 {
 		//log.Printf("Correct a1")
 		ac := A[1] ^ ((A[1] & 0x40) ^ (B[0] & 0x40))
 		Xc[0] = rrot(ac, shift1[0]) - A[0] - F(B[0], C[0], D[0])
 	}
-	if cond == 2 {
+	if cond == 1 {
 		//log.Printf("Correct d1")
 		//cond := (d&0x40 == 0) && (d&0x80 == a&0x80) && (d&0x400 == a&0x400)
 		dc := D[1] ^ (D[1] & 0x40) ^ ((D[1] ^ A[1]) & 0x80) ^ ((D[1] ^ A[1]) & 0x400)
 		Xc[1] = rrot(dc, shift1[1]) - D[0] - F(A[1], B[0], C[0])
 	}
-	if cond == 3 {
+	if cond == 2 {
 		// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
 		//log.Printf("Correct c1")
 		cc := C[1] ^ (0x40 &^ C[1]) ^ (0x80 &^ C[1]) ^ (C[1] & 0x400) ^ ((C[1] ^ D[1]) & 0x2000000)
 		Xc[2] = rrot(cc, shift1[2]) - C[0] - F(D[1], A[1], B[0])
 	}
-	if cond == 4 {
+	if cond == 3 {
 		// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
 		//log.Printf("Correct b1")
 		bc := B[1] ^ (0x40 &^ B[1]) ^ (0x80 & B[1]) ^ (B[1] & 0x400) ^ (B[1] & 0x2000000)
 		Xc[3] = rrot(bc, shift1[3]) - B[0] - F(C[1], D[1], A[1])
 	}
 
+	if cond == 4 {
+		//log.Printf("Correct a2")
+		// a&0x80 == 0x80 && a&0x400 == 0x400 && a&0x2000000 == 0 && a&0x2000 == b1&0x2000
+		ac := A[2] ^ (0x80 &^ A[2]) ^ (0x400 &^ A[2]) ^ (0x2000000 & A[2]) ^ (0x2000 & (A[2] ^ B[1]))
+		Xc[4] = rrot(ac, shift1[0]) - A[1] - F(B[1], C[1], D[1])
+	}
 	if cond == 5 {
 		//log.Printf("Correct d2")
 		//d&0x2000 == 0 && d&0x40000 == a&0x40000 && d&0x80000 == a&0x80000 && d&0x100000 == a&0x100000 && d&0x200000 == a&0x200000 && d&0x2000000 == 0x2000000
@@ -486,8 +493,8 @@ func main() {
 	M0 := []byte(strings.Repeat("a", 64))
 	M := make([]byte, len(M0))
 	Mp := []byte(strings.Repeat("x", 64))
+	rand.Seed(1)
 	for trials := 1; ; trials++ {
-		copy(M, M0)
 		for i := 0; i <= 21; i++ {
 			Correct(M, i)
 		}
@@ -510,7 +517,11 @@ func main() {
 		if trials%1000000 == 0 {
 			log.Printf("%d tries", trials)
 		}
-		nextMessage(M0)
+		for i, _ := range M0 {
+			M[i] = byte(rand.Uint32())
+		}
+		//nextMessage(M0)
+		//copy(M, M0)
 	}
 
 }
