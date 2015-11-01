@@ -24,6 +24,8 @@ var shift3 = []uint{3, 9, 11, 15}
 var xIndex2 = []uint{0, 4, 8, 12, 1, 5, 9, 13, 2, 6, 10, 14, 3, 7, 11, 15}
 var xIndex3 = []uint{0, 8, 4, 12, 2, 10, 6, 14, 1, 9, 5, 13, 3, 11, 7, 15}
 
+var b2Zeroes = []uint{}
+
 func CheckConditions(m []byte) bool {
 	a, b, c, d := uint32(0x67452301), uint32(0xEFCDAB89), uint32(0x98BADCFE), uint32(0x10325476)
 
@@ -81,16 +83,16 @@ func CheckConditions(m []byte) bool {
 				log.Printf("Condition d2: %t", cond)
 				return false
 			}
-			// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
-			// if !cond {
-			//     log.Printf("Condition c2: %t", cond)
-			//     return false
-			// }
-			// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
-			// if !cond {
-			//     log.Printf("Condition b2: %t", cond)
-			//     return false
-			// }
+			cond = c&0x1000 == d&0x1000 && c&0x2000 == 0 && c&0x4000 == d&0x4000 && c&0x40000 == 0 && c&0x80000 == 0 && c&0x100000 == 0x100000 && c&0x200000 == 0
+			if !cond {
+				log.Printf("Condition c2: %t", cond)
+				return false
+			}
+			cond = b&0x1000 == 0x1000 && b&0x2000 == 0x2000 && b&0x4000 == 0 && b&0x10000 == c&0x10000 && b&0x40000 == 0 && b&0x80000 == 0 && b&0x100000 == 0 && b&0x200000 == 0
+			if !cond {
+				log.Printf("Condition b2: %t", cond)
+				return false
+			}
 		}
 	}
 
@@ -213,6 +215,16 @@ func Correct(m []byte, cond uint32) {
 		//d&0x2000 == 0 && d&0x40000 == a&0x40000 && d&0x80000 == a&0x80000 && d&0x100000 == a&0x100000 && d&0x200000 == a&0x200000 && d&0x2000000 == 0x2000000
 		dc := D[2] ^ (0x2000 & D[2]) ^ ((D[2] ^ A[2]) & 0x40000) ^ ((D[2] ^ A[2]) & 0x80000) ^ ((D[2] ^ A[2]) & 0x100000) ^ ((D[2] ^ A[2]) & 0x200000) ^ (0x2000000 &^ D[2])
 		Xc[5] = rrot(dc, shift1[1]) - D[1] - F(A[2], B[1], C[1])
+	}
+	if cond&0x2 != 0 {
+		//cond = c&0x1000 == d&0x1000 && c&0x2000 == 0 && c&0x4000 == d&0x4000 && c&0x40000 == 0 && c&0x80000 == 0 && c&0x100000 == 0x100000 && c&0x200000 == 0
+		cc := C[2] ^ (0x1000 & (C[2] ^ D[2])) ^ (0x2000 & C[2]) ^ (0x4000 & (C[2] ^ D[2])) ^ (0x40000 & C[2]) ^ (0x80000 & C[2]) ^ (0x100000 &^ C[2]) ^ (0x200000 & C[2])
+		Xc[6] = rrot(cc, shift1[2]) - C[1] - F(D[2], A[2], B[1])
+	}
+	if cond&0x2 != 0 {
+		//cond = b&0x1000 == 0x1000 && b&0x2000 == 0x2000 && b&0x4000 == 0 && b&0x10000 == c&0x10000 && b&0x40000 == 0 && b&0x80000 == 0 && b&0x100000 == 0 && b&0x200000 == 0
+		bc := B[2] ^ (0x1000 &^ B[2]) ^ (0x2000 &^ B[2]) ^ (0x4000 & B[2]) ^ (0x10000 & (B[2] ^ C[2])) ^ (0x40000 & B[2]) ^ (0x80000 & B[2]) ^ (0x100000 & B[2]) ^ (0x200000 & B[2])
+		Xc[7] = rrot(bc, shift1[3]) - B[1] - F(C[2], D[2], A[2])
 	}
 
 	// G := func(b, c, d uint32) uint32 {
