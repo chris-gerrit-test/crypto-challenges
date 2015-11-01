@@ -94,6 +94,7 @@ func CheckConditions(m []byte) bool {
 			// log.Printf("Condition a5.5: %t", a&0x80000000 == 0x80000000)
 			// log.Printf("Condition a5: %t", cond)
 			if !cond {
+				log.Printf("Condition a5: %t", cond)
 				return false
 			}
 		}
@@ -165,11 +166,11 @@ func Correct(m []byte, cond uint32) {
 		ac := A[1] ^ ((A[1] & 0x40) ^ (B[0] & 0x40))
 		Xc[0] = rrot(ac, shift1[0]) - A[0] - F(B[0], C[0], D[0])
 	}
-	// if cond&0x2 != 0 {
-	//     cond := (d&0x40 == 0) && (d&0x80 == a&0x80) && (d&0x400 == a&0x400)
-	//     dc := D[1] ^ (D[1] & 0x40) ^ ((D[1] ^ A[1]) & 0x80) ^ ((D[1] ^ A[1]) & 0x400)
-	//     Xc[1] = rrot(dc, 7) - D[0] - F(A[1], B[0], C[0])
-	// }
+	if cond&0x1 != 0 {
+		//cond := (d&0x40 == 0) && (d&0x80 == a&0x80) && (d&0x400 == a&0x400)
+		dc := D[1] ^ (D[1] & 0x40) ^ ((D[1] ^ A[1]) & 0x80) ^ ((D[1] ^ A[1]) & 0x400)
+		Xc[1] = rrot(dc, 7) - D[0] - F(A[1], B[0], C[0])
+	}
 	if cond&0x1 != 0 {
 		// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
 		//log.Printf("Correct c1")
