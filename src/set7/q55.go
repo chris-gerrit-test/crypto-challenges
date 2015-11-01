@@ -39,7 +39,7 @@ func CheckConditions(m []byte) bool {
 
 	// Round 1.
 	b0 := b
-	var b1 uint32
+	var b1, b2 uint32
 	for i := uint(0); i < 16; i++ {
 		x := i
 		s := shift1[i%4]
@@ -73,6 +73,7 @@ func CheckConditions(m []byte) bool {
 			}
 		}
 		if i == 7 {
+			b2 = b
 			cond := a&0x80 == 0x80 && a&0x400 == 0x400 && a&0x2000000 == 0 && a&0x2000 == b1&0x2000
 			if !cond {
 				log.Printf("Condition a2: %t", cond)
@@ -91,6 +92,28 @@ func CheckConditions(m []byte) bool {
 			cond = b&0x1000 == 0x1000 && b&0x2000 == 0x2000 && b&0x4000 == 0 && b&0x10000 == c&0x10000 && b&0x40000 == 0 && b&0x80000 == 0 && b&0x100000 == 0 && b&0x200000 == 0
 			if !cond {
 				log.Printf("Condition b2: %t", cond)
+				return false
+			}
+		}
+		if i == 11 {
+			cond := a&0x1000 == 0x1000 && a&0x2000 == 0x2000 && a&0x4000 == 0x4000 && a&0x10000 == 0 && a&0x40000 == 0 && a&0x80000 == 0 && a&0x100000 == 0 && a&0x200000 == 0x200000 && a&0x400000 == b2&0x400000 && a&0x2000000 == b2&0x2000000
+			if !cond {
+				log.Printf("Condition a3: %t", cond)
+				return false
+			}
+			cond = d&0x1000 == 0x1000 && d&0x2000 == 0x2000 && d&0x4000 == 0x4000 && d&0x10000 == 0 && d&0x80000 == 0 && d&0x100000 == 0x100000 && d&0x200000 == 0x200000 && d&0x400000 == 0 && d&0x2000000 == 0x2000000 && d&0x20000000 == a&0x20000000
+			if !cond {
+				log.Printf("Condition d3: %t", cond)
+				return false
+			}
+			cond = c&0x10000 == 0x10000 && c&0x80000 == 0 && c&0x100000 == 0 && c&0x200000 == 0 && c&0x400000 == 0 && c&0x2000000 == 0 && c&0x20000000 == 0x20000000 && c&0x80000000 == d&0x80000000
+			if !cond {
+				log.Printf("Condition c3: %t", cond)
+				return false
+			}
+			cond = b&0x80000 == 0 && b&0x100000 == 0x100000 && b&0x200000 == 0x200000 && b&0x400000 == c&0x400000 && b&0x2000000 == 0x2000000 && b&0x20000000 == 0 && b&0x80000000 == 0
+			if !cond {
+				log.Printf("Condition b3: %t", cond)
 				return false
 			}
 		}
@@ -144,7 +167,7 @@ func rrot(n uint32, r uint) uint32 {
 	return (n >> r) | n<<(32-r)
 }
 
-func Correct(m []byte, cond uint32) {
+func Correct(m []byte, cond int) {
 	a, b, c, d := uint32(0x67452301), uint32(0xEFCDAB89), uint32(0x98BADCFE), uint32(0x10325476)
 
 	var X [16]uint32
@@ -187,44 +210,66 @@ func Correct(m []byte, cond uint32) {
 			D[i/4+1] = d
 		}
 	}
-	if cond&0x1 != 0 {
+	if cond == 1 {
 		//log.Printf("Correct a1")
 		ac := A[1] ^ ((A[1] & 0x40) ^ (B[0] & 0x40))
 		Xc[0] = rrot(ac, shift1[0]) - A[0] - F(B[0], C[0], D[0])
 	}
-	if cond&0x1 != 0 {
+	if cond == 2 {
+		//log.Printf("Correct d1")
 		//cond := (d&0x40 == 0) && (d&0x80 == a&0x80) && (d&0x400 == a&0x400)
 		dc := D[1] ^ (D[1] & 0x40) ^ ((D[1] ^ A[1]) & 0x80) ^ ((D[1] ^ A[1]) & 0x400)
 		Xc[1] = rrot(dc, shift1[1]) - D[0] - F(A[1], B[0], C[0])
 	}
-	if cond&0x1 != 0 {
+	if cond == 3 {
 		// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
 		//log.Printf("Correct c1")
 		cc := C[1] ^ (0x40 &^ C[1]) ^ (0x80 &^ C[1]) ^ (C[1] & 0x400) ^ ((C[1] ^ D[1]) & 0x2000000)
 		Xc[2] = rrot(cc, shift1[2]) - C[0] - F(D[1], A[1], B[0])
 	}
-	if cond&0x1 != 0 {
+	if cond == 4 {
 		// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
 		//log.Printf("Correct b1")
 		bc := B[1] ^ (0x40 &^ B[1]) ^ (0x80 & B[1]) ^ (B[1] & 0x400) ^ (B[1] & 0x2000000)
 		Xc[3] = rrot(bc, shift1[3]) - B[0] - F(C[1], D[1], A[1])
 	}
 
-	if cond&0x2 != 0 {
+	if cond == 5 {
 		//log.Printf("Correct d2")
 		//d&0x2000 == 0 && d&0x40000 == a&0x40000 && d&0x80000 == a&0x80000 && d&0x100000 == a&0x100000 && d&0x200000 == a&0x200000 && d&0x2000000 == 0x2000000
 		dc := D[2] ^ (0x2000 & D[2]) ^ ((D[2] ^ A[2]) & 0x40000) ^ ((D[2] ^ A[2]) & 0x80000) ^ ((D[2] ^ A[2]) & 0x100000) ^ ((D[2] ^ A[2]) & 0x200000) ^ (0x2000000 &^ D[2])
 		Xc[5] = rrot(dc, shift1[1]) - D[1] - F(A[2], B[1], C[1])
 	}
-	if cond&0x2 != 0 {
+	if cond == 6 {
 		//cond = c&0x1000 == d&0x1000 && c&0x2000 == 0 && c&0x4000 == d&0x4000 && c&0x40000 == 0 && c&0x80000 == 0 && c&0x100000 == 0x100000 && c&0x200000 == 0
 		cc := C[2] ^ (0x1000 & (C[2] ^ D[2])) ^ (0x2000 & C[2]) ^ (0x4000 & (C[2] ^ D[2])) ^ (0x40000 & C[2]) ^ (0x80000 & C[2]) ^ (0x100000 &^ C[2]) ^ (0x200000 & C[2])
 		Xc[6] = rrot(cc, shift1[2]) - C[1] - F(D[2], A[2], B[1])
 	}
-	if cond&0x2 != 0 {
+	if cond == 7 {
 		//cond = b&0x1000 == 0x1000 && b&0x2000 == 0x2000 && b&0x4000 == 0 && b&0x10000 == c&0x10000 && b&0x40000 == 0 && b&0x80000 == 0 && b&0x100000 == 0 && b&0x200000 == 0
 		bc := B[2] ^ (0x1000 &^ B[2]) ^ (0x2000 &^ B[2]) ^ (0x4000 & B[2]) ^ (0x10000 & (B[2] ^ C[2])) ^ (0x40000 & B[2]) ^ (0x80000 & B[2]) ^ (0x100000 & B[2]) ^ (0x200000 & B[2])
 		Xc[7] = rrot(bc, shift1[3]) - B[1] - F(C[2], D[2], A[2])
+	}
+
+	if cond == 8 {
+		//cond := a&0x1000 == 0x1000 && a&0x2000 == 0x2000 && a&0x4000 == 0x4000 && a&0x10000 == 0 && a&0x40000 == 0 && a&0x80000 == 0 && a&0x100000 == 0 && a&0x200000 == 0x200000 && a&0x400000 == b&0x400000 && a&0x2000000 == b&0x2000000
+		ac := A[3] ^ (0x1000 &^ A[3]) ^ (0x2000 &^ A[3]) ^ (0x4000 &^ A[3]) ^ (0x10000 & A[3]) ^ (0x40000 & A[3]) ^ (0x80000 & A[3]) ^ (0x100000 & A[3]) ^ (0x200000 &^ A[3]) ^ (0x400000 & (A[3] ^ B[2])) ^ (0x2000000 & (A[3] ^ B[2]))
+		Xc[8] = rrot(ac, shift1[0]) - A[2] - F(B[2], C[2], D[2])
+	}
+	if cond == 9 {
+		// cond = d&0x1000 == 0x1000 && d&0x2000 == 0x2000 && d&0x4000 == 0x4000 && d&0x10000 == 0 && d&0x80000 == 0 && d&0x100000 == 0x100000 && d&0x200000 == 0x200000 && d&0x400000 == 0 && d&0x2000000 == 0x2000000 && d&0x20000000 == a&0x20000000
+		dc := D[3] ^ (0x1000 &^ D[3]) ^ (0x2000 &^ D[3]) ^ (0x4000 &^ D[3]) ^ (0x10000 & D[3]) ^ (0x80000 & D[3]) ^ (0x100000 &^ D[3]) ^ (0x200000 &^ D[3]) ^ (0x400000 & D[3]) ^ (0x2000000 &^ D[3]) ^ (0x20000000 & (D[3] ^ A[3]))
+		Xc[9] = rrot(dc, shift1[1]) - D[2] - F(A[3], B[2], C[2])
+	}
+	if cond == 10 {
+		// cond = c&0x10000 == 0x10000 && c&0x80000 == 0 && c&0x100000 == 0 && c&0x200000 == 0 && c&0x400000 == 0 && c&0x2000000 == 0 && c&0x20000000 == 0x20000000 && c&0x80000000 == d&0x80000000
+		cc := C[3] ^ (0x10000 &^ C[3]) ^ (0x80000 & C[3]) ^ (0x100000 & C[3]) ^ (0x200000 & C[3]) ^ (0x400000 & C[3]) ^ (0x2000000 & C[3]) ^ (0x20000000 &^ C[3]) ^ (0x80000000 & (C[3] ^ D[3]))
+		Xc[10] = rrot(cc, shift1[2]) - C[2] - F(D[3], A[3], B[2])
+	}
+	if cond == 11 {
+		// cond = b&0x80000 == 0 && b&0x100000 == 0x100000 && b&0x200000 == 0x200000 && b&0x400000 == c&0x400000 && b&0x2000000 == 0x2000000 && b&0x20000000 == 0 && b&0x80000000 == 0
+		bc := B[3] ^ (0x80000 & B[3]) ^ (0x100000 &^ B[3]) ^ (0x200000 &^ B[3]) ^ (0x400000 & (B[3] ^ C[3])) ^ (0x2000000 &^ B[3]) ^ (0x20000000 & B[3]) ^ (0x80000000 & B[3])
+		Xc[11] = rrot(bc, shift1[3]) - B[2] - F(C[3], D[3], A[3])
 	}
 
 	// G := func(b, c, d uint32) uint32 {
@@ -254,23 +299,23 @@ func Correct(m []byte, cond uint32) {
 	}
 	corrections := make([]Correction, 0)
 	aNew := A[1]
-	if cond&0x4 != 0 && A[5]&0x40000 != C[4]&0x40000 {
+	if cond == 17 && A[5]&0x40000 != C[4]&0x40000 {
 		//log.Printf("Correct a5.1")
 		corrections = append(corrections, Correction{19, C[4]&0x40000 != 0})
 	}
-	if cond&0x8 != 0 && A[5]&0x2000000 != 0x2000000 {
+	if cond == 18 && A[5]&0x2000000 != 0x2000000 {
 		//log.Printf("Correct a5.2")
 		corrections = append(corrections, Correction{26, true})
 	}
-	if cond&0x10 != 0 && A[5]&0x4000000 != 0 {
+	if cond == 19 && A[5]&0x4000000 != 0 {
 		//log.Printf("Correct a5.3")
 		corrections = append(corrections, Correction{27, false})
 	}
-	if cond&0x20 != 0 && A[5]&0x10000000 != 0x10000000 {
+	if cond == 20 && A[5]&0x10000000 != 0x10000000 {
 		//log.Printf("Correct a5.4")
 		corrections = append(corrections, Correction{29, true})
 	}
-	if cond&0x40 != 0 && A[5]&0x80000000 != 0x80000000 {
+	if cond == 21 && A[5]&0x80000000 != 0x80000000 {
 		//log.Printf("Correct a5.5")
 		corrections = append(corrections, Correction{32, true})
 	}
@@ -371,6 +416,9 @@ func main() {
 	if !CheckConditions(m1) {
 		return
 	}
+	if !CheckConditions(m2) {
+		return
+	}
 	// CheckConditions(m2)
 	// md1 := md4.New(16)
 	// md2 := md4.New(16)
@@ -397,7 +445,7 @@ func main() {
 	Mp := []byte(strings.Repeat("x", 64))
 	for trials := 1; ; trials++ {
 		copy(M, M0)
-		for i := uint32(1); i <= 64; i *= 2 {
+		for i := 0; i <= 21; i++ {
 			Correct(M, i)
 		}
 		if !CheckConditions(M) {
