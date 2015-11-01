@@ -37,6 +37,7 @@ func CheckConditions(m []byte) bool {
 
 	// Round 1.
 	b0 := b
+	var b1 uint32
 	for i := uint(0); i < 16; i++ {
 		x := i
 		s := shift1[i%4]
@@ -45,6 +46,7 @@ func CheckConditions(m []byte) bool {
 		a = a<<s | a>>(32-s)
 		a, b, c, d = d, a, b, c
 		if i == 3 {
+			b1 = b
 			//log.Printf("Condition a1: %t", a&0x40 == b0&0x40)
 			if a&0x40 != b0&0x40 {
 				log.Printf("Condition a1: %t", a&0x40 == b0&0x40)
@@ -67,6 +69,28 @@ func CheckConditions(m []byte) bool {
 				log.Printf("Condition b1: %t", cond)
 				return false
 			}
+		}
+		if i == 7 {
+			cond := a&0x80 == 0x80 && a&0x400 == 0x400 && a&0x2000000 == 0 && a&0x2000 == b1&0x2000
+			if !cond {
+				log.Printf("Condition a2: %t", cond)
+				return false
+			}
+			cond = d&0x2000 == 0 && d&0x40000 == a&0x40000 && d&0x80000 == a&0x80000 && d&0x100000 == a&0x100000 && d&0x200000 == a&0x200000 && d&0x2000000 == 0x2000000
+			if !cond {
+				log.Printf("Condition d2: %t", cond)
+				return false
+			}
+			// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
+			// if !cond {
+			//     log.Printf("Condition c2: %t", cond)
+			//     return false
+			// }
+			// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
+			// if !cond {
+			//     log.Printf("Condition b2: %t", cond)
+			//     return false
+			// }
 		}
 	}
 
@@ -169,13 +193,13 @@ func Correct(m []byte, cond uint32) {
 	if cond&0x1 != 0 {
 		//cond := (d&0x40 == 0) && (d&0x80 == a&0x80) && (d&0x400 == a&0x400)
 		dc := D[1] ^ (D[1] & 0x40) ^ ((D[1] ^ A[1]) & 0x80) ^ ((D[1] ^ A[1]) & 0x400)
-		Xc[1] = rrot(dc, 7) - D[0] - F(A[1], B[0], C[0])
+		Xc[1] = rrot(dc, shift1[1]) - D[0] - F(A[1], B[0], C[0])
 	}
 	if cond&0x1 != 0 {
 		// cond = (c&0x40 == 0x40) && (c&0x80 == 0x80) && (c&0x400 == 0) && (c&0x2000000 == d&0x2000000)
 		//log.Printf("Correct c1")
-		dc := C[1] ^ (0x40 &^ C[1]) ^ (0x80 &^ C[1]) ^ (C[1] & 0x400) ^ ((C[1] ^ D[1]) & 0x2000000)
-		Xc[2] = rrot(dc, shift1[2]) - C[0] - F(D[1], A[1], B[0])
+		cc := C[1] ^ (0x40 &^ C[1]) ^ (0x80 &^ C[1]) ^ (C[1] & 0x400) ^ ((C[1] ^ D[1]) & 0x2000000)
+		Xc[2] = rrot(cc, shift1[2]) - C[0] - F(D[1], A[1], B[0])
 	}
 	if cond&0x1 != 0 {
 		// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
@@ -183,6 +207,17 @@ func Correct(m []byte, cond uint32) {
 		bc := B[1] ^ (0x40 &^ B[1]) ^ (0x80 & B[1]) ^ (B[1] & 0x400) ^ (B[1] & 0x2000000)
 		Xc[3] = rrot(bc, shift1[3]) - B[0] - F(C[1], D[1], A[1])
 	}
+
+	if cond&0x2 != 0 {
+		//log.Printf("Correct d2")
+		//d&0x2000 == 0 && d&0x40000 == a&0x40000 && d&0x80000 == a&0x80000 && d&0x100000 == a&0x100000 && d&0x200000 == a&0x200000 && d&0x2000000 == 0x2000000
+		dc := D[2] ^ (0x2000 & D[2]) ^ ((D[2] ^ A[2]) & 0x40000) ^ ((D[2] ^ A[2]) & 0x80000) ^ ((D[2] ^ A[2]) & 0x100000) ^ ((D[2] ^ A[2]) & 0x200000) ^ (0x2000000 &^ D[2])
+		Xc[5] = rrot(dc, shift1[1]) - D[1] - F(A[2], B[1], C[1])
+	}
+
+	// G := func(b, c, d uint32) uint32 {
+	// 	return (b & c) | (b & d) | (c & d)
+	// }
 
 	// Round 2.
 	for i := uint(0); i < 16; i++ {
@@ -199,6 +234,7 @@ func Correct(m []byte, cond uint32) {
 			D[i/4+5] = d
 		}
 	}
+
 	// Correct for a5 constraints
 	type Correction struct {
 		i   uint32
@@ -252,7 +288,7 @@ func Correct(m []byte, cond uint32) {
 		a, b, c, d = d, a, b, c
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 16; i++ {
 		m[4*i] = byte(Xc[i])
 		m[4*i+1] = byte(Xc[i] >> 8)
 		m[4*i+2] = byte(Xc[i] >> 16)
@@ -320,7 +356,9 @@ func main() {
 		log.Printf("%x", m1p)
 		return
 	}
-	// CheckConditions(m1)
+	if !CheckConditions(m1) {
+		return
+	}
 	// CheckConditions(m2)
 	// md1 := md4.New(16)
 	// md2 := md4.New(16)
@@ -341,6 +379,7 @@ func main() {
 	// log.Printf("%x", m)
 	// CheckConditions(m)
 
+	log.Printf("Looking for a collision")
 	M0 := []byte(strings.Repeat("a", 64))
 	M := make([]byte, len(M0))
 	Mp := []byte(strings.Repeat("x", 64))
