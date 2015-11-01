@@ -65,6 +65,7 @@ func CheckConditions(m []byte) bool {
 			cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
 			if !cond {
 				log.Printf("Condition b1: %t", cond)
+				return false
 			}
 		}
 	}
@@ -174,6 +175,12 @@ func Correct(m []byte, cond uint32) {
 		//log.Printf("Correct c1")
 		dc := C[1] ^ (0x40 &^ C[1]) ^ (0x80 &^ C[1]) ^ (C[1] & 0x400) ^ ((C[1] ^ D[1]) & 0x2000000)
 		Xc[2] = rrot(dc, shift1[2]) - C[0] - F(D[1], A[1], B[0])
+	}
+	if cond&0x1 != 0 {
+		// cond = (b&0x40 == 0x40) && (b&0x80 == 0) && (b&0x400 == 0) && (b&0x2000000 == 0)
+		//log.Printf("Correct b1")
+		bc := B[1] ^ (0x40 &^ B[1]) ^ (0x80 & B[1]) ^ (B[1] & 0x400) ^ (B[1] & 0x2000000)
+		Xc[3] = rrot(bc, shift1[3]) - B[0] - F(C[1], D[1], A[1])
 	}
 
 	// Round 2.
