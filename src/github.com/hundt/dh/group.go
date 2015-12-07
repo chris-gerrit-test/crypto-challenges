@@ -1,6 +1,7 @@
 package dh
 
 import (
+	"fmt"
 	"math/big"
 	"math/rand"
 )
@@ -9,6 +10,12 @@ type Group interface {
 	Op(x, y GroupMember) GroupMember
 	Pow(x GroupMember, y *big.Int) GroupMember
 	Random() GroupMember
+}
+
+type CyclicGroup interface {
+	Group
+	Generator() GroupMember
+	Size() big.Int
 }
 
 type GroupMember interface {
@@ -58,7 +65,7 @@ func (pg *finiteGroup) Pow(x GroupMember, y *big.Int) GroupMember {
 	return &finiteGroupMember{n: z, g: pg}
 }
 
-var rnd = rand.New(rand.NewSource(7))
+var rnd = rand.New(rand.NewSource(77777))
 
 func (pg *finiteGroup) Random() GroupMember {
 	z := new(big.Int)
@@ -87,8 +94,12 @@ func (m *generatedGroupMember) String() string {
 	return m.m.String()
 }
 
-func NewGeneratedGroup(g Group, m GroupMember, q big.Int) Group { // q is order of g in mod n
-	return &generatedGroup{g: g, m: m, q: &q}
+func NewGeneratedGroup(m GroupMember, q big.Int) CyclicGroup { // q is order of g in mod n
+	return &generatedGroup{g: m.Group(), m: m, q: &q}
+}
+
+func (gg *generatedGroup) String() string {
+	return fmt.Sprintf("{size %s generated from %s}", gg.q, gg.Generator())
 }
 
 func (gg *generatedGroup) Op(x, y GroupMember) GroupMember {
@@ -112,4 +123,15 @@ func (gg *generatedGroup) Random() GroupMember {
 		m:  gg.g.Pow(gg.m, z),
 		gg: gg,
 	}
+}
+
+func (gg *generatedGroup) Generator() GroupMember {
+	return &generatedGroupMember{
+		m:  gg.m,
+		gg: gg,
+	}
+}
+
+func (gg *generatedGroup) Size() big.Int {
+	return *gg.q
 }
