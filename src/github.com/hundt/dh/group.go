@@ -6,6 +6,8 @@ import (
 	"math/rand"
 )
 
+var rnd = rand.New(rand.NewSource(77778))
+
 type Group interface {
 	Op(x, y GroupMember) GroupMember
 	Pow(x GroupMember, y *big.Int) GroupMember
@@ -65,8 +67,6 @@ func (pg *finiteGroup) Pow(x GroupMember, y *big.Int) GroupMember {
 	return &finiteGroupMember{n: z, g: pg}
 }
 
-var rnd = rand.New(rand.NewSource(77777))
-
 func (pg *finiteGroup) Random() GroupMember {
 	z := new(big.Int)
 	for z.Cmp(new(big.Int)) == 0 {
@@ -96,6 +96,11 @@ func (m *generatedGroupMember) String() string {
 
 func NewGeneratedGroup(m GroupMember, q big.Int) CyclicGroup { // q is order of g in mod n
 	return &generatedGroup{g: m.Group(), m: m, q: &q}
+}
+
+// Returns m as a GroupMember<g>, even if m is not in g
+func NewFakeGeneratedGroupMember(g Group, m GroupMember) GroupMember {
+	return &generatedGroupMember{m: m, gg: g.(*generatedGroup)}
 }
 
 func (gg *generatedGroup) String() string {
