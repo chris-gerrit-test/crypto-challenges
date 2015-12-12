@@ -11,8 +11,8 @@ type diffieHellman struct {
 }
 
 type DiffieHellman interface {
-	PublicKey() GroupMember
-	SharedSecret(B GroupMember) GroupMember
+	PublicKey() Element
+	SharedSecret(B Element) Element
 }
 
 func (d *diffieHellman) String() string {
@@ -26,10 +26,10 @@ func NewDiffieHellman(g CyclicGroup) DiffieHellman {
 	return &diffieHellman{g: g, a: z}
 }
 
-func (d *diffieHellman) PublicKey() GroupMember {
+func (d *diffieHellman) PublicKey() Element {
 	return d.g.Pow(d.g.Generator(), d.a)
 }
 
-func (d *diffieHellman) SharedSecret(B GroupMember) GroupMember {
+func (d *diffieHellman) SharedSecret(B Element) Element {
 	return d.g.Pow(B, d.a)
 }

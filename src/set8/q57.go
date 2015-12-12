@@ -42,12 +42,12 @@ func StreamPrimes(ch chan<- int64) {
 
 var secretMessage = []byte("crazy flamboyant for the rap enjoyment")
 
-func Sign(msg []byte, key dh.GroupMember) []byte {
+func Sign(msg []byte, key dh.Element) []byte {
 	h := hmac.New(sha1.New, []byte(key.String()))
 	return h.Sum(msg)
 }
 
-func Bob(d dh.DiffieHellman, pub dh.GroupMember) []byte {
+func Bob(d dh.DiffieHellman, pub dh.Element) []byte {
 	k := d.SharedSecret(pub)
 	return Sign(secretMessage, k)
 }
@@ -107,23 +107,21 @@ func main() {
 	}
 
 	G := dh.NewFiniteGroup(*pi)
-	g := dh.NewFiniteGroupMember(G, *gi)
-	GG := dh.NewGeneratedGroup(g, *q)
+	g := dh.NewFiniteElement(G, *gi)
+	GG := dh.NewGeneratedGroup(G, g, *q)
 	d := dh.NewDiffieHellman(GG)
 
 	moduli := make(map[int64]int64)
 
 	for factor, elt := range factors {
-		h := dh.NewFakeGeneratedGroupMember(
-			GG, dh.NewFiniteGroupMember(G, *elt))
+		h := dh.NewFiniteElement(G, *elt)
 		mac := Bob(d, h)
 		e := new(big.Int).Set(elt)
 		log.Printf("Guessing the shared secret in the subgroup of order %d", factor)
 		found := false
 		for i := int64(1); i <= factor; i++ {
 			e.Exp(elt, big.NewInt(i), pi)
-			k := dh.NewFakeGeneratedGroupMember(
-				GG, dh.NewFiniteGroupMember(G, *e))
+			k := dh.NewFiniteElement(G, *e)
 			if hmac.Equal(mac, Sign(secretMessage, k)) {
 				//log.Printf("%d^%d", elt, i)
 				found = true

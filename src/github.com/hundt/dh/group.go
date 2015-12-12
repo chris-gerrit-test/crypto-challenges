@@ -8,21 +8,30 @@ import (
 
 var rnd = rand.New(rand.NewSource(77778))
 
+var k = big.NewInt(5)
+
+func jump(x *big.Int) *big.Int {
+	j := new(big.Int)
+	j.Mod(x, k)
+	j.Exp(big.NewInt(2), j, nil)
+	return j
+}
+
 type Group interface {
-	Op(x, y GroupMember) GroupMember
-	Pow(x GroupMember, y *big.Int) GroupMember
-	Random() GroupMember
+	Op(x, y Element) Element
+	Pow(x Element, y *big.Int) Element
+	Random() Element
 }
 
 type CyclicGroup interface {
 	Group
-	Generator() GroupMember
+	Generator() Element
 	Size() big.Int
 }
 
-type GroupMember interface {
-	Group() Group
+type Element interface {
 	String() string
+	Jump() *big.Int
 }
 
 type finiteGroup struct {
@@ -33,108 +42,77 @@ func NewFiniteGroup(p big.Int) Group {
 	return &finiteGroup{p: &p}
 }
 
-type finiteGroupMember struct {
+type finiteElement struct {
 	n *big.Int
-	g *finiteGroup
 }
 
-func NewFiniteGroupMember(g Group, n big.Int) GroupMember {
+func NewFiniteElement(g Group, n big.Int) Element {
 	pg := g.(*finiteGroup)
-	return &finiteGroupMember{g: pg, n: n.Mod(&n, pg.p)}
+	return &finiteElement{n: n.Mod(&n, pg.p)}
 }
 
-func (n *finiteGroupMember) Group() Group {
-	return n.g
-}
-
-func (n *finiteGroupMember) String() string {
+func (n *finiteElement) String() string {
 	return n.n.String()
 }
 
-func (pg *finiteGroup) Op(x, y GroupMember) GroupMember {
-	px := x.(*finiteGroupMember)
-	py := y.(*finiteGroupMember)
+func (n *finiteElement) Jump() *big.Int {
+	return jump(n.n)
+}
+
+func (pg *finiteGroup) Op(x, y Element) Element {
+	px := x.(*finiteElement)
+	py := y.(*finiteElement)
 	z := new(big.Int)
 	z.Mul(px.n, py.n)
 	z.Mod(z, pg.p)
-	return &finiteGroupMember{n: z, g: pg}
+	return &finiteElement{n: z}
 }
 
-func (pg *finiteGroup) Pow(x GroupMember, y *big.Int) GroupMember {
-	px := x.(*finiteGroupMember)
+func (pg *finiteGroup) Pow(x Element, y *big.Int) Element {
+	px := x.(*finiteElement)
 	z := new(big.Int)
 	z.Exp(px.n, y, pg.p)
-	return &finiteGroupMember{n: z, g: pg}
+	return &finiteElement{n: z}
 }
 
-func (pg *finiteGroup) Random() GroupMember {
+func (pg *finiteGroup) Random() Element {
 	z := new(big.Int)
 	for z.Cmp(new(big.Int)) == 0 {
 		z.Rand(rnd, pg.p)
 	}
-	return &finiteGroupMember{n: z, g: pg}
+	return &finiteElement{n: z}
 }
 
 type generatedGroup struct {
 	g Group
-	m GroupMember
-	q *big.Int // order of g
+	m Element
+	q *big.Int // order of m in g
 }
 
-type generatedGroupMember struct {
-	m  GroupMember
-	gg *generatedGroup
-}
-
-func (m *generatedGroupMember) Group() Group {
-	return m.gg
-}
-
-func (m *generatedGroupMember) String() string {
-	return m.m.String()
-}
-
-func NewGeneratedGroup(m GroupMember, q big.Int) CyclicGroup { // q is order of g in mod n
-	return &generatedGroup{g: m.Group(), m: m, q: &q}
-}
-
-// Returns m as a GroupMember<g>, even if m is not in g
-func NewFakeGeneratedGroupMember(g Group, m GroupMember) GroupMember {
-	return &generatedGroupMember{m: m, gg: g.(*generatedGroup)}
+func NewGeneratedGroup(g Group, m Element, q big.Int) CyclicGroup { // q is order of m in g
+	return &generatedGroup{m: m, q: &q, g: g}
 }
 
 func (gg *generatedGroup) String() string {
 	return fmt.Sprintf("{size %s generated from %s}", gg.q, gg.Generator())
 }
 
-func (gg *generatedGroup) Op(x, y GroupMember) GroupMember {
-	return &generatedGroupMember{
-		m:  gg.g.Op(x.(*generatedGroupMember).m, y.(*generatedGroupMember).m),
-		gg: gg,
-	}
+func (gg *generatedGroup) Op(x, y Element) Element {
+	return gg.g.Op(x, y)
 }
 
-func (gg *generatedGroup) Pow(x GroupMember, y *big.Int) GroupMember {
-	return &generatedGroupMember{
-		m:  gg.g.Pow(x.(*generatedGroupMember).m, y),
-		gg: gg,
-	}
+func (gg *generatedGroup) Pow(x Element, y *big.Int) Element {
+	return gg.g.Pow(x, y)
 }
 
-func (gg *generatedGroup) Random() GroupMember {
+func (gg *generatedGroup) Random() Element {
 	z := new(big.Int)
 	z.Rand(rnd, gg.q)
-	return &generatedGroupMember{
-		m:  gg.g.Pow(gg.m, z),
-		gg: gg,
-	}
+	return gg.g.Pow(gg.m, z)
 }
 
-func (gg *generatedGroup) Generator() GroupMember {
-	return &generatedGroupMember{
-		m:  gg.m,
-		gg: gg,
-	}
+func (gg *generatedGroup) Generator() Element {
+	return gg.m
 }
 
 func (gg *generatedGroup) Size() big.Int {
