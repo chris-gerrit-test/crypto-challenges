@@ -149,9 +149,4 @@ func main() {
 	log.Printf("Predicted key: %d", x)
 
 	log.Printf("%s", d)
-	// dh1 := dh.NewDiffieHellman(GG)
-	// dh2 := dh.NewDiffieHellman(GG)
-	// log.Printf("\n%s\n%s", dh1, dh2)
-	// log.Printf("%s %s", dh1.PublicKey(), dh2.PublicKey())
-	// log.Printf("\n%s\n\n%s", dh1.SharedSecret(dh2.PublicKey()), dh2.SharedSecret(dh1.PublicKey()))
 }
