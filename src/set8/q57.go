@@ -10,36 +10,6 @@ import (
 	"github.com/hundt/dh"
 )
 
-func Generate(ch chan<- int64) {
-	for i := int64(2); ; i++ {
-		ch <- i // Send 'i' to channel 'ch'.
-	}
-}
-
-// Copy the values from channel 'in' to channel 'out',
-// removing those divisible by 'prime'.
-func Filter(in <-chan int64, out chan<- int64, prime int64) {
-	for {
-		i := <-in // Receive value from 'in'.
-		if i%prime != 0 {
-			out <- i // Send 'i' to 'out'.
-		}
-	}
-}
-
-// Sends primes to the passed-in channel forever
-func StreamPrimes(ch chan<- int64) {
-	ch2 := make(chan int64) // Create a new channel.
-	go Generate(ch2)        // Launch Generate goroutine.
-	for {
-		prime := <-ch2
-		ch <- prime
-		ch1 := make(chan int64)
-		go Filter(ch2, ch1, prime)
-		ch2 = ch1
-	}
-}
-
 var secretMessage = []byte("crazy flamboyant for the rap enjoyment")
 
 func Sign(msg []byte, key dh.Element) []byte {
@@ -62,58 +32,18 @@ func main() {
 	q := new(big.Int)
 	q.SetString("236234353446506858198510045061214171961", 10)
 
-	j := new(big.Int)
-	j.Sub(pi, big.NewInt(1))
-	j.Div(j, q)
-
-	ch := make(chan int64) // Create a new channel.
-	go StreamPrimes(ch)
-	zero := new(big.Int)
-	factors := make(map[int64]*big.Int, 0)
-	total := big.NewInt(1)
-	for total.Cmp(q) < 0 {
-		prime := <-ch
-		pr := big.NewInt(prime)
-		pr.Rem(j, pr)
-		if pr.Cmp(zero) == 0 {
-			j2 := new(big.Int).Set(j)
-			j2.Div(j, big.NewInt(prime))
-			pr.Rem(j2, big.NewInt(prime))
-			if pr.Cmp(zero) == 0 {
-				log.Printf("Skipping double divisor %d", prime)
-			} else {
-				log.Printf("Found divisor %d", prime)
-				factors[prime] = nil
-				total.Mul(total, big.NewInt(prime))
-			}
-		}
-	}
-
-	for factor, _ := range factors {
-		h := new(big.Int)
-		groupSize := new(big.Int)
-		groupSize.Sub(pi, big.NewInt(1))
-		pow := new(big.Int)
-		pow.Div(groupSize, big.NewInt(factor))
-		log.Printf("Finding an element of order %d...", factor)
-		for {
-			h.Rand(rnd, pi)
-			h.Exp(h, pow, pi)
-			if h.Cmp(big.NewInt(1)) != 0 {
-				break
-			}
-		}
-		factors[factor] = h
-	}
-
 	G := dh.NewFiniteGroup(*pi)
 	g := dh.NewFiniteElement(G, *gi)
 	GG := dh.NewGeneratedGroup(G, g, *q)
 	d := dh.NewDiffieHellman(GG)
 
+	factors := dh.FindCoFactors(q, pi)
+
 	moduli := make(map[int64]int64)
+	total := big.NewInt(1)
 
 	for factor, elt := range factors {
+		total.Mul(total, big.NewInt(factor))
 		h := dh.NewFiniteElement(G, *elt)
 		mac := Bob(d, h)
 		e := new(big.Int).Set(elt)

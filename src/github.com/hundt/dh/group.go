@@ -8,13 +8,10 @@ import (
 
 var rnd = rand.New(rand.NewSource(77778))
 
-var k = big.NewInt(5)
-
-func jump(x *big.Int) *big.Int {
+func jump(x *big.Int, k int) int {
 	j := new(big.Int)
-	j.Mod(x, k)
-	j.Exp(big.NewInt(2), j, nil)
-	return j
+	j.Mod(x, big.NewInt(int64(k)))
+	return 1 << j.Uint64()
 }
 
 type Group interface {
@@ -31,7 +28,8 @@ type CyclicGroup interface {
 
 type Element interface {
 	String() string
-	Jump() *big.Int
+	Cmp(Element) int
+	Jump(k int) int
 }
 
 type finiteGroup struct {
@@ -55,8 +53,13 @@ func (n *finiteElement) String() string {
 	return n.n.String()
 }
 
-func (n *finiteElement) Jump() *big.Int {
-	return jump(n.n)
+func (n *finiteElement) Jump(k int) int {
+	return jump(n.n, k)
+}
+
+func (n *finiteElement) Cmp(e Element) int {
+	m := e.(*finiteElement)
+	return n.n.Cmp(m.n)
 }
 
 func (pg *finiteGroup) Op(x, y Element) Element {
