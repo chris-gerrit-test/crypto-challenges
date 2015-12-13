@@ -210,6 +210,10 @@ q57:
 	GOPATH=$(GOPATH) go build -o bin/q57 src/set8/q57.go
 	bin/q57
 
+q58:
+	GOPATH=$(GOPATH) go build -o bin/q58 src/set8/q58.go
+	bin/q58
+
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
 set2: q9 q10 q11 q12 q13 q14 q15 q16
@@ -222,6 +226,6 @@ set5: q33 q34 q35 q36 q37 q38 q39 q40
 
 set7: q49 q50 q51 q52 q53 q54 q55 q56
 
-set8: q57
+set8: q57 q58
 
 all: set1 set2 set3 set4 set5
