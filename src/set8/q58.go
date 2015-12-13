@@ -108,8 +108,7 @@ func main() {
 	log.Printf("x mod r = %s [r = %s]", x, total)
 
 	n := new(big.Int)
-	n.Sub(pi, x)
-	n.Sub(n, big.NewInt(1))
+	n.Sub(q, x)
 
 	hp := GG.Op(d.PublicKey(), GG.Pow(g, n))
 	gp := GG.Pow(g, total)
