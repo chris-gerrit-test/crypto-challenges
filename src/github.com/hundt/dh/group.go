@@ -121,3 +121,132 @@ func (gg *generatedGroup) Generator() Element {
 func (gg *generatedGroup) Size() big.Int {
 	return *gg.q
 }
+
+type ellipticCurve struct {
+	a, b    *big.Int
+	modulus *big.Int
+}
+
+func (ec *ellipticCurve) String() string {
+	return fmt.Sprintf("y^2 = x^3 + %s*x + %s (mod %s)", ec.a, ec.b, ec.modulus)
+}
+
+func NewEllipticCurve(a, b, modulus *big.Int) Group {
+	return &ellipticCurve{
+		a:       new(big.Int).Set(a),
+		b:       new(big.Int).Set(b),
+		modulus: new(big.Int).Set(modulus),
+	}
+}
+
+type ellipticCurveElement struct {
+	x, y *big.Int
+}
+
+var inf *ellipticCurveElement = new(ellipticCurveElement)
+
+func NewEllipticCurveElement(g Group, x, y *big.Int) Element {
+	// TODO: check that the points are on the curve?
+	// TODO mod
+	return &ellipticCurveElement{
+		x: new(big.Int).Set(x),
+		y: new(big.Int).Set(y),
+	}
+}
+
+func (e *ellipticCurveElement) String() string {
+	if e == inf {
+		return "∞"
+	}
+	return fmt.Sprintf("(%s,%s)", e.x, e.y)
+}
+
+func (e *ellipticCurveElement) Jump(k int) int {
+	panic("not implemented")
+	return -1
+}
+
+func (e1 *ellipticCurveElement) Cmp(e Element) int {
+	e2 := e.(*ellipticCurveElement)
+	if e1 == inf {
+		if e2 == inf {
+			return 0
+		}
+		return 1
+	}
+	if e2 == inf {
+		return -1
+	}
+	c := e1.x.Cmp(e2.x)
+	if c != 0 {
+		return c
+	}
+	return e1.y.Cmp(e2.y)
+}
+
+func (ec *ellipticCurve) Op(x, y Element) Element {
+	e1 := x.(*ellipticCurveElement)
+	e2 := y.(*ellipticCurveElement)
+	if e1 == inf {
+		return e2
+	}
+	if e2 == inf {
+		return e1
+	}
+	var m *big.Int
+	if e1.x.Cmp(e2.x) == 0 {
+		my2 := new(big.Int).Set(e2.y)
+		my2.Sub(ec.modulus, my2)
+		if my2.Cmp(e1.y) == 0 {
+			return inf
+		}
+		if e2.y.Cmp(e1.y) == 0 {
+			m = new(big.Int)
+			m.Exp(e1.x, big.NewInt(2), ec.modulus)
+			m.Mul(m, big.NewInt(3))
+			m.Add(m, ec.a)
+			denom := new(big.Int)
+			denom.Mul(big.NewInt(2), e1.y)
+			denom.ModInverse(denom, ec.modulus)
+			m.Mul(m, denom)
+			m.Mod(m, ec.modulus)
+		}
+	}
+	if m == nil {
+		m = new(big.Int)
+		denom := new(big.Int)
+		denom.Sub(e2.x, e1.x)
+		denom.Mod(denom, ec.modulus)
+		denom.ModInverse(denom, ec.modulus)
+		m.Sub(e2.y, e1.y)
+		m.Mul(m, denom)
+		m.Mod(m, ec.modulus)
+	}
+	e := &ellipticCurveElement{
+		x: new(big.Int),
+		y: new(big.Int),
+	}
+	e.x.Mul(m, m)
+	e.x.Sub(e.x, e1.x)
+	e.x.Sub(e.x, e2.x)
+	e.x.Mod(e.x, ec.modulus)
+	e.y.Sub(e1.x, e.x)
+	// if e.y.Cmp(new(big.Int)) < 0 {
+	// 	e.y.Sub(new(big.Int), e.y)
+	// 	log.Printf("inverting")
+	// 	m.ModInverse(m, ec.modulus)
+	// }
+	e.y.Mul(m, e.y)
+	e.y.Sub(e.y, e1.y)
+	e.y.Mod(e.y, ec.modulus)
+	return e
+}
+
+func (pg *ellipticCurve) Pow(x Element, y *big.Int) Element {
+	return nil
+}
+
+func (pg *ellipticCurve) Random() Element {
+	panic("not implemented")
+	return nil
+}
