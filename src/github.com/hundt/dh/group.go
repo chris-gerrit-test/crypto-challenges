@@ -231,19 +231,37 @@ func (ec *ellipticCurve) Op(x, y Element) Element {
 	e.x.Sub(e.x, e2.x)
 	e.x.Mod(e.x, ec.modulus)
 	e.y.Sub(e1.x, e.x)
-	// if e.y.Cmp(new(big.Int)) < 0 {
-	// 	e.y.Sub(new(big.Int), e.y)
-	// 	log.Printf("inverting")
-	// 	m.ModInverse(m, ec.modulus)
-	// }
 	e.y.Mul(m, e.y)
 	e.y.Sub(e.y, e1.y)
 	e.y.Mod(e.y, ec.modulus)
 	return e
 }
 
+func genericPow(G Group, x Element, y *big.Int) Element {
+	y = new(big.Int).Set(y)
+	var result Element = nil
+	zero := new(big.Int)
+	bit := new(big.Int)
+	two := big.NewInt(2)
+	if y.Cmp(zero) < 0 {
+		panic("Cannot use genericPow with y < 0")
+	}
+	for y.Cmp(zero) != 0 {
+		y.QuoRem(y, two, bit)
+		if bit.Cmp(zero) != 0 {
+			if result == nil {
+				result = x
+			} else {
+				result = G.Op(result, x)
+			}
+		}
+		x = G.Op(x, x)
+	}
+	return result
+}
+
 func (pg *ellipticCurve) Pow(x Element, y *big.Int) Element {
-	return nil
+	return genericPow(pg, x, y)
 }
 
 func (pg *ellipticCurve) Random() Element {
