@@ -65,22 +65,19 @@ func main() {
 	}
 
 	fmt.Printf("\n=== PHASE II: APPLY WITH COFACTOR ATTACK ===\n")
-	factors := dh.FindCoFactors(q, pi)
+	factors := dh.FindCoFactors(q, pi, G)
 
 	moduli := make(map[int64]int64)
 	total := big.NewInt(1)
 
 	d := dh.NewDiffieHellman(GG)
-	for factor, elt := range factors {
+	for factor, h := range factors {
 		total.Mul(total, big.NewInt(factor))
-		h := dh.NewFiniteElement(G, *elt)
 		mac := Bob(d, h)
-		e := new(big.Int).Set(elt)
 		log.Printf("Guessing the shared secret in the subgroup of order %d", factor)
 		found := false
 		for i := int64(1); i <= factor; i++ {
-			e.Exp(elt, big.NewInt(i), pi)
-			k := dh.NewFiniteElement(G, *e)
+			k := G.Pow(h, big.NewInt(i))
 			if hmac.Equal(mac, Sign(secretMessage, k)) {
 				//log.Printf("%d^%d", elt, i)
 				found = true

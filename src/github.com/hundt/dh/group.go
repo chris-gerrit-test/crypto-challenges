@@ -18,6 +18,7 @@ type Group interface {
 	Op(x, y Element) Element
 	Pow(x Element, y *big.Int) Element
 	Random() Element
+	Identity() Element
 }
 
 type CyclicGroup interface {
@@ -60,6 +61,10 @@ func (n *finiteElement) Jump(k int) int {
 func (n *finiteElement) Cmp(e Element) int {
 	m := e.(*finiteElement)
 	return n.n.Cmp(m.n)
+}
+
+func (pg *finiteGroup) Identity() Element {
+	return &finiteElement{n: big.NewInt(1)}
 }
 
 func (pg *finiteGroup) Op(x, y Element) Element {
@@ -112,6 +117,10 @@ func (gg *generatedGroup) Random() Element {
 	z := new(big.Int)
 	z.Rand(rnd, gg.q)
 	return gg.g.Pow(gg.m, z)
+}
+
+func (gg *generatedGroup) Identity() Element {
+	return gg.g.Identity()
 }
 
 func (gg *generatedGroup) Generator() Element {
@@ -265,6 +274,24 @@ func (pg *ellipticCurve) Pow(x Element, y *big.Int) Element {
 }
 
 func (pg *ellipticCurve) Random() Element {
-	panic("not implemented")
-	return nil
+	x := new(big.Int)
+	var y *big.Int = nil
+	t := new(big.Int)
+	for y == nil {
+		x.Rand(rnd, pg.modulus)
+		xc := new(big.Int).Exp(x, big.NewInt(3), pg.modulus)
+		t.Mul(x, pg.a)
+		t.Add(t, xc)
+		t.Add(t, pg.b)
+		t.Mod(t, pg.modulus)
+		y = t.ModSqrt(t, pg.modulus)
+	}
+	return &ellipticCurveElement{
+		x: x,
+		y: y,
+	}
+}
+
+func (gg *ellipticCurve) Identity() Element {
+	return inf
 }

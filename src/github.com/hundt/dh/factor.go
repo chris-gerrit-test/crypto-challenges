@@ -36,17 +36,13 @@ func streamPrimes(ch chan<- int64) {
 	}
 }
 
-func FindCoFactors(q, n *big.Int) map[int64]*big.Int {
-	j := new(big.Int)
-	j.Sub(n, big.NewInt(1))
-	j.Div(j, q)
-
+func FindFactors(j, groupSize, target *big.Int, G Group) map[int64]Element {
 	ch := make(chan int64)
 	go streamPrimes(ch)
 	zero := new(big.Int)
-	factors := make(map[int64]*big.Int, 0)
+	factors := make(map[int64]Element, 0)
 	total := big.NewInt(1)
-	for total.Cmp(q) < 0 {
+	for total.Cmp(target) < 0 {
 		prime := <-ch
 		pr := big.NewInt(prime)
 		pr.Rem(j, pr)
@@ -69,16 +65,14 @@ func FindCoFactors(q, n *big.Int) map[int64]*big.Int {
 	}
 
 	for factor, _ := range factors {
-		h := new(big.Int)
-		groupSize := new(big.Int)
-		groupSize.Sub(n, big.NewInt(1))
+		var h Element = nil
+		groupSize := new(big.Int).Set(groupSize)
 		pow := new(big.Int)
 		pow.Div(groupSize, big.NewInt(factor))
 		log.Printf("Finding an element of order %d...", factor)
 		for {
-			h.Rand(rnd, n)
-			h.Exp(h, pow, n)
-			if h.Cmp(big.NewInt(1)) != 0 {
+			h = G.Pow(G.Random(), pow)
+			if h.Cmp(G.Identity()) != 0 {
 				break
 			}
 		}
@@ -86,6 +80,16 @@ func FindCoFactors(q, n *big.Int) map[int64]*big.Int {
 	}
 
 	return factors
+}
+
+func FindCoFactors(q, n *big.Int, G Group) map[int64]Element {
+	j := new(big.Int)
+	j.Sub(n, big.NewInt(1))
+	j.Div(j, q)
+
+	groupSize := new(big.Int).Sub(n, big.NewInt(1))
+
+	return FindFactors(j, groupSize, q, G)
 }
 
 func JumpMean(G Group, k int) float64 {
