@@ -2,6 +2,7 @@ package dh
 
 import (
 	"fmt"
+	"log"
 	"math/big"
 	"math/rand"
 )
@@ -294,4 +295,173 @@ func (pg *ellipticCurve) Random() Element {
 
 func (gg *ellipticCurve) Identity() Element {
 	return inf
+}
+
+type montgomeryCurve struct {
+	A, B    *big.Int
+	modulus *big.Int
+}
+
+func (ec *montgomeryCurve) String() string {
+	return fmt.Sprintf("%s*v^2 = u^3 + %s*u^2 + u (mod %s)", ec.B, ec.A, ec.modulus)
+}
+
+func Q60MontgomeryToWeierstrass(e Element, newGroup Group) Element {
+	g := newGroup.(*ellipticCurve)
+	elt := e.(*montgomeryCurveElement)
+	x := new(big.Int).Add(elt.u, big.NewInt(178))
+	sc1 := new(big.Int).Exp(elt.u, big.NewInt(3), g.modulus)
+	sc2 := new(big.Int).Mul(elt.u, elt.u)
+	sc2.Mul(sc2, big.NewInt(534))
+	sc1.Add(sc1, sc2)
+	sc1.Add(sc1, elt.u)
+	if sc1.ModSqrt(sc1, g.modulus) == nil {
+		log.Panic("no matching y found")
+	}
+	return NewEllipticCurveElement(g, x, sc1)
+}
+
+func Q60WeierstrassToMontgomery(x Element, newGroup Group) Element {
+	e := x.(*ellipticCurveElement)
+	u := new(big.Int).Set(e.x)
+	u.Sub(u, big.NewInt(178))
+	u.Mod(u, newGroup.(*montgomeryCurve).modulus)
+	return NewMontgomeryCurveElement(newGroup, u)
+}
+
+func NewMontgomeryCurve(A, B, modulus *big.Int) Group {
+	return &montgomeryCurve{
+		A:       new(big.Int).Set(A),
+		B:       new(big.Int).Set(B),
+		modulus: new(big.Int).Set(modulus),
+	}
+}
+
+type montgomeryCurveElement struct {
+	u *big.Int
+}
+
+var mInf *montgomeryCurveElement = new(montgomeryCurveElement)
+
+func NewMontgomeryCurveElement(g Group, u *big.Int) Element {
+	return &montgomeryCurveElement{
+		u: new(big.Int).Set(u),
+	}
+}
+
+func (e *montgomeryCurveElement) String() string {
+	if e == mInf {
+		return "∞"
+	}
+	return fmt.Sprintf("%s", e.u)
+}
+
+func (e *montgomeryCurveElement) Jump(k int) int {
+	panic("not implemented")
+	return -1
+}
+
+func (e1 *montgomeryCurveElement) Cmp(e Element) int {
+	e2 := e.(*montgomeryCurveElement)
+	if e1 == mInf {
+		if e2 == mInf {
+			return 0
+		}
+		return 1
+	}
+	if e2 == mInf {
+		return -1
+	}
+	return e1.u.Cmp(e2.u)
+}
+
+func (ec *montgomeryCurve) Op(x, y Element) Element {
+	log.Fatal("Not implemented")
+	return nil
+}
+
+func cswap(x, y *big.Int, b uint) (*big.Int, *big.Int) {
+	if b == 1 {
+		return y, x
+	}
+	return x, y
+}
+
+func (pg *montgomeryCurve) Pow(x Element, k *big.Int) Element {
+	e := x.(*montgomeryCurveElement)
+	u2 := big.NewInt(1)
+	w2 := big.NewInt(0)
+	u3 := new(big.Int).Set(e.u)
+	w3 := big.NewInt(1)
+	sc1 := new(big.Int)
+	sc2 := new(big.Int)
+	sc3 := new(big.Int)
+	foundBit := false
+	for i := pg.modulus.BitLen() - 1; i >= 0; i-- {
+		b := k.Bit(i)
+		if foundBit || b != 0 {
+			foundBit = true
+		}
+		if !foundBit {
+			continue
+		}
+		//log.Printf("Begin: (%d, %d)    (%d, %d)", u2, w2, u3, w3)
+		//log.Printf("bit %d is %d", i, b)
+		u2, u3 = cswap(u2, u3, b)
+		w2, w3 = cswap(w2, w3, b)
+		//log.Printf("After cswap: (%d, %d)    (%d, %d)", u2, w2, u3, w3)
+		// u3 = u2*u3 - w2*w3)^2
+		sc1.Mul(u2, u3)
+		sc2.Mul(w2, w3)
+		sc1.Sub(sc1, sc2)
+		sc3.Mul(sc1, sc1)
+		sc3.Mod(sc3, pg.modulus)
+		// w3 = u1 * (u2*w3 - w2*u3)^2
+		sc1.Mul(u2, w3)
+		sc2.Mul(w2, u3)
+		sc1.Sub(sc1, sc2)
+		w3.Mul(sc1, sc1)
+		w3.Mul(e.u, w3)
+		w3.Mod(w3, pg.modulus)
+		u3.Set(sc3)
+		// u2 = (u2^2 - w2^2)^2
+		sc1.Mul(u2, u2)
+		sc2.Mul(w2, w2)
+		sc3.Sub(sc1, sc2)
+		sc3.Mul(sc3, sc3)
+		sc3.Mod(sc3, pg.modulus)
+		// w2 = 4*u2*w2 * (u2^2 + A*u2*w2 + w2^2)
+		sc1.Mul(u2, u2)
+		sc2.Mul(pg.A, u2)
+		sc2.Mul(sc2, w2)
+		sc1.Add(sc1, sc2)
+		sc2.Mul(w2, w2)
+		sc1.Add(sc1, sc2)
+		sc2.Mul(big.NewInt(4), u2)
+		sc2.Mul(sc2, w2)
+		w2.Mul(sc2, sc1)
+		w2.Mod(w2, pg.modulus)
+		u2.Set(sc3)
+
+		u2, u3 = cswap(u2, u3, b)
+		w2, w3 = cswap(w2, w3, b)
+		//log.Printf("End: (%d, %d)    (%d, %d)", u2, w2, u3, w3)
+	}
+	//log.Printf("%d %d", u2, w2)
+	sc1.Sub(pg.modulus, big.NewInt(2))
+	sc1.Exp(w2, sc1, pg.modulus)
+	sc1.Mul(sc1, u2)
+	sc1.Mod(sc1, pg.modulus)
+	return &montgomeryCurveElement{
+		u: sc1,
+	}
+}
+
+func (pg *montgomeryCurve) Random() Element {
+	log.Fatal("Not implemented")
+	return nil
+}
+
+func (gg *montgomeryCurve) Identity() Element {
+	return mInf
 }
