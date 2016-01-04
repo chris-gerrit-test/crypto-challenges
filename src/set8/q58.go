@@ -49,13 +49,13 @@ func main() {
 
 		h := dh.NewFiniteElement(G, *hi)
 
-		log.Printf("Searching for order of %s", h)
+		log.Printf("Searching for discrete log of %s", h)
 		x := dh.Pollard(GG, g, h, a, b)
 		if x == nil {
 			log.Printf("The wild kangaroo escaped!")
 		} else {
 			x.Mod(x, q)
-			log.Printf("order = %s", x)
+			log.Printf("discrete log = %s", x)
 			check := GG.Pow(g, x)
 			log.Printf("%s^%d mod %s == %s", g, x, pi, GG.Pow(g, x))
 			if check.Cmp(h) != 0 {
@@ -112,13 +112,13 @@ func main() {
 	B := new(big.Int)
 	B.Div(q, total)
 
-	log.Printf("Searching for order of %s", hp)
+	log.Printf("Searching for discrete log of %s", hp)
 	m := dh.Pollard(GG, gp, hp, 0, int(B.Int64()))
 	if m == nil {
 		log.Printf("The wild kangaroo escaped!")
 	} else {
 		m.Mod(m, q)
-		log.Printf("order = %s", m)
+		log.Printf("discrete log = %s", m)
 		check := GG.Pow(gp, m)
 		log.Printf("%s^%d mod %s == %s", gp, m, pi, GG.Pow(gp, m))
 		if check.Cmp(hp) != 0 {
