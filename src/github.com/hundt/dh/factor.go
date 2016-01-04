@@ -6,47 +6,23 @@ import (
 	"math/big"
 )
 
-func generate(ch chan<- int64) {
-	for i := int64(2); ; i++ {
-		ch <- i // Send 'i' to channel 'ch'.
-	}
-}
-
-// Copy the values from channel 'in' to channel 'out',
-// removing those divisible by 'prime'.
-func filter(in <-chan int64, out chan<- int64, prime int64) {
-	for {
-		i := <-in // Receive value from 'in'.
-		if i%prime != 0 {
-			out <- i // Send 'i' to 'out'.
-		}
-	}
-}
-
-// Sends primes to the passed-in channel forever
-func streamPrimes(ch chan<- int64) {
-	ch2 := make(chan int64) // Create a new channel.
-	go generate(ch2)        // Launch Generate goroutine.
-	for {
-		prime := <-ch2
-		ch <- prime
-		ch1 := make(chan int64)
-		go filter(ch2, ch1, prime)
-		ch2 = ch1
-	}
-}
-
 func FindFactors(j, groupSize, target *big.Int, G Group) map[int64]Element {
-	ch := make(chan int64)
-	go streamPrimes(ch)
 	zero := new(big.Int)
 	factors := make(map[int64]Element, 0)
 	total := big.NewInt(1)
-	for total.Cmp(target) < 0 {
-		prime := <-ch
+	for prime := int64(2); total.Cmp(target) < 0; prime++ {
+		// Some quick exits that cover the majority of cases
+		if prime > 11 {
+			if prime%2 == 0 || prime%3 == 0 || prime%5 == 0 || prime%7 == 0 || prime%11 == 0 {
+				continue
+			}
+		}
 		pr := big.NewInt(prime)
 		pr.Rem(j, pr)
 		if pr.Cmp(zero) == 0 {
+			if !big.NewInt(prime).ProbablyPrime(20) {
+				continue
+			}
 			j2 := new(big.Int).Set(j)
 			j2.Div(j, big.NewInt(prime))
 			pr.Rem(j2, big.NewInt(prime))
@@ -58,7 +34,7 @@ func FindFactors(j, groupSize, target *big.Int, G Group) map[int64]Element {
 				total.Mul(total, big.NewInt(prime))
 			}
 		}
-		if prime > 1<<16 {
+		if prime > 1<<22 {
 			log.Printf("Giving up with total=%s", total)
 			break
 		}
@@ -73,6 +49,7 @@ func FindFactors(j, groupSize, target *big.Int, G Group) map[int64]Element {
 		for {
 			h = G.Pow(G.Random(), pow)
 			if h.Cmp(G.Identity()) != 0 {
+				//log.Printf("%s^%d == %s", h, factor, G.Pow(h, big.NewInt(factor)))
 				break
 			}
 		}
