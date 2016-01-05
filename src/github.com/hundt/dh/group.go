@@ -7,7 +7,7 @@ import (
 	"math/rand"
 )
 
-var rnd = rand.New(rand.NewSource(77778))
+var rnd = rand.New(rand.NewSource(77780))
 
 func jump(x *big.Int, k int) int {
 	j := new(big.Int)
@@ -172,8 +172,7 @@ func (e *ellipticCurveElement) String() string {
 }
 
 func (e *ellipticCurveElement) Jump(k int) int {
-	panic("not implemented")
-	return -1
+	return jump(e.x, k)
 }
 
 func (e1 *ellipticCurveElement) Cmp(e Element) int {
@@ -203,6 +202,7 @@ func (ec *ellipticCurve) Op(x, y Element) Element {
 	if e2 == inf {
 		return e1
 	}
+	pMinus2 := new(big.Int).Sub(ec.modulus, big.NewInt(2))
 	var m *big.Int
 	if e1.x.Cmp(e2.x) == 0 {
 		my2 := new(big.Int).Set(e2.y)
@@ -217,7 +217,8 @@ func (ec *ellipticCurve) Op(x, y Element) Element {
 			m.Add(m, ec.a)
 			denom := new(big.Int)
 			denom.Mul(big.NewInt(2), e1.y)
-			denom.ModInverse(denom, ec.modulus)
+			denom.Exp(denom, pMinus2, ec.modulus)
+			//denom.ModInverse(denom, ec.modulus)
 			m.Mul(m, denom)
 			m.Mod(m, ec.modulus)
 		}
@@ -227,7 +228,8 @@ func (ec *ellipticCurve) Op(x, y Element) Element {
 		denom := new(big.Int)
 		denom.Sub(e2.x, e1.x)
 		denom.Mod(denom, ec.modulus)
-		denom.ModInverse(denom, ec.modulus)
+		denom.Exp(denom, pMinus2, ec.modulus)
+		//denom.ModInverse(denom, ec.modulus)
 		m.Sub(e2.y, e1.y)
 		m.Mul(m, denom)
 		m.Mod(m, ec.modulus)
@@ -306,6 +308,12 @@ func (ec *montgomeryCurve) String() string {
 	return fmt.Sprintf("%s*v^2 = u^3 + %s*u^2 + u (mod %s)", ec.B, ec.A, ec.modulus)
 }
 
+func NegateWeierstrass(e Element, g Group) {
+	elt := e.(*ellipticCurveElement)
+	grp := g.(*ellipticCurve)
+	elt.y.Sub(grp.modulus, elt.y)
+}
+
 func Q60MontgomeryToWeierstrass(e Element, newGroup Group) Element {
 	g := newGroup.(*ellipticCurve)
 	elt := e.(*montgomeryCurveElement)
@@ -341,8 +349,6 @@ type montgomeryCurveElement struct {
 	u *big.Int
 }
 
-var mInf *montgomeryCurveElement = new(montgomeryCurveElement)
-
 func NewMontgomeryCurveElement(g Group, u *big.Int) Element {
 	return &montgomeryCurveElement{
 		u: new(big.Int).Set(u),
@@ -350,7 +356,7 @@ func NewMontgomeryCurveElement(g Group, u *big.Int) Element {
 }
 
 func (e *montgomeryCurveElement) String() string {
-	if e == mInf {
+	if e.u.Cmp(new(big.Int)) == 0 {
 		return "∞"
 	}
 	return fmt.Sprintf("%s", e.u)
@@ -363,15 +369,6 @@ func (e *montgomeryCurveElement) Jump(k int) int {
 
 func (e1 *montgomeryCurveElement) Cmp(e Element) int {
 	e2 := e.(*montgomeryCurveElement)
-	if e1 == mInf {
-		if e2 == mInf {
-			return 0
-		}
-		return 1
-	}
-	if e2 == mInf {
-		return -1
-	}
 	return e1.u.Cmp(e2.u)
 }
 
@@ -457,11 +454,29 @@ func (pg *montgomeryCurve) Pow(x Element, k *big.Int) Element {
 	}
 }
 
+// NB: this actually returns a random point that is *not* on the curve.
 func (pg *montgomeryCurve) Random() Element {
-	log.Fatal("Not implemented")
-	return nil
+	if pg.B.Cmp(big.NewInt(1)) != 0 {
+		log.Fatal("Only B=1 is supported")
+	}
+	for {
+		u := new(big.Int).Rand(rnd, pg.modulus)
+		square := new(big.Int).Mul(u, u)
+		square.Mul(square, pg.A)
+		cube := new(big.Int).Exp(u, big.NewInt(3), pg.modulus)
+		v := new(big.Int).Add(square, cube)
+		v.Add(v, u)
+		v.Mod(v, pg.modulus)
+		if v.ModSqrt(v, pg.modulus) == nil {
+			return &montgomeryCurveElement{
+				u: u,
+			}
+		}
+	}
 }
 
 func (gg *montgomeryCurve) Identity() Element {
-	return mInf
+	return &montgomeryCurveElement{
+		u: new(big.Int),
+	}
 }
