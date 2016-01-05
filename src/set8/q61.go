@@ -33,24 +33,37 @@ func main() {
 	q, _ := new(big.Int).SetString("29246302889428143187362802287225875743", 10)
 	GG := dh.NewGeneratedGroup(G, g, *q)
 
-	ecdsa := dh.NewECDSA(GG)
-	log.Printf("%s", ecdsa.PublicKey())
-	r, s := ecdsa.Sign(secretMessage)
+	alice := dh.NewECDSA(GG)
+	log.Printf("Alice's group identity: %s", alice.Group().Identity())
+	log.Printf("Alice's group generator: %s", alice.Group().Generator())
+	log.Printf("Alice's generator^q: %s", alice.Group().Pow(alice.Group().Generator(), q))
+	r, s := alice.Sign(secretMessage)
 	log.Printf("r=%d s=%d", r, s)
 	log.Printf("Verifies: %v",
-		dh.ECDSAVerify(secretMessage, r, s, ecdsa.PublicKey(), GG))
+		dh.ECDSAVerify(secretMessage, r, s, alice))
 	log.Printf("Verifies with different message: %v",
-		dh.ECDSAVerify([]byte("xxx"), r, s, ecdsa.PublicKey(), GG))
+		dh.ECDSAVerify([]byte("xxx"), r, s, alice))
 	r.Add(r, big.NewInt(1))
 	r.Mod(r, p)
 	log.Printf("Verifies after r += 1: %v",
-		dh.ECDSAVerify(secretMessage, r, s, ecdsa.PublicKey(), GG))
+		dh.ECDSAVerify(secretMessage, r, s, alice))
 	s.Add(s, big.NewInt(1))
 	s.Mod(s, p)
 	log.Printf("Verifies after r and s += 1: %v",
-		dh.ECDSAVerify(secretMessage, r, s, ecdsa.PublicKey(), GG))
+		dh.ECDSAVerify(secretMessage, r, s, alice))
 	r.Sub(r, big.NewInt(1))
 	r.Mod(r, p)
 	log.Printf("Verifies after s += 1: %v",
-		dh.ECDSAVerify(secretMessage, r, s, ecdsa.PublicKey(), GG))
+		dh.ECDSAVerify(secretMessage, r, s, alice))
+	s.Sub(s, big.NewInt(1))
+	s.Mod(s, p)
+	log.Printf("Verifies original: %v",
+		dh.ECDSAVerify(secretMessage, r, s, alice))
+
+	eve := dh.FindVerifyingECDSA(secretMessage, r, s, GG)
+	log.Printf("Eve verifies: %v",
+		dh.ECDSAVerify(secretMessage, r, s, eve))
+	log.Printf("Eve's group identity: %s", eve.Group().Identity())
+	log.Printf("Eve's group generator: %s", eve.Group().Generator())
+	log.Printf("Eve's generator^q: %s", eve.Group().Pow(eve.Group().Generator(), q))
 }

@@ -1,6 +1,7 @@
 package dh
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -162,6 +163,21 @@ func NewEllipticCurveElement(g Group, x, y *big.Int) Element {
 		x: new(big.Int).Set(x),
 		y: new(big.Int).Set(y),
 	}
+}
+
+func NewEllipticCurveElementFromX(g Group, x *big.Int) (Element, error) {
+	ec := g.(*ellipticCurve)
+	x3 := new(big.Int).Exp(x, big.NewInt(3), ec.modulus)
+	y := new(big.Int).Mul(ec.a, x)
+	y.Add(y, x3)
+	y.Add(y, ec.b)
+	if y.ModSqrt(y, ec.modulus) == nil {
+		return nil, errors.New("No square root")
+	}
+	return &ellipticCurveElement{
+		x: new(big.Int).Set(x),
+		y: new(big.Int).Set(y),
+	}, nil
 }
 
 func (e *ellipticCurveElement) String() string {
