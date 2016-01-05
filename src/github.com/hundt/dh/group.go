@@ -25,7 +25,7 @@ type Group interface {
 type CyclicGroup interface {
 	Group
 	Generator() Element
-	Size() big.Int
+	Size() *big.Int
 }
 
 type Element interface {
@@ -128,8 +128,8 @@ func (gg *generatedGroup) Generator() Element {
 	return gg.m
 }
 
-func (gg *generatedGroup) Size() big.Int {
-	return *gg.q
+func (gg *generatedGroup) Size() *big.Int {
+	return new(big.Int).Set(gg.q)
 }
 
 type ellipticCurve struct {

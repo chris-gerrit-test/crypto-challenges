@@ -21,8 +21,7 @@ func (d *diffieHellman) String() string {
 
 func NewDiffieHellman(g CyclicGroup) DiffieHellman {
 	z := new(big.Int)
-	n := g.Size()
-	z.Rand(rnd, &n)
+	z.Rand(rnd, g.Size())
 	return &diffieHellman{g: g, a: z}
 }
 
