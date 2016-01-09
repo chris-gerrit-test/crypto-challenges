@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha1"
 	"log"
 	"math/big"
@@ -66,4 +67,25 @@ func main() {
 	log.Printf("Eve's group identity: %s", eve.Group().Identity())
 	log.Printf("Eve's group generator: %s", eve.Group().Generator())
 	log.Printf("Eve's generator^q: %s", eve.Group().Pow(eve.Group().Generator(), q))
+
+	pi, err := rand.Prime(rand.Reader, 1024)
+	if err != nil {
+		panic(err)
+	}
+	qi, err := rand.Prime(rand.Reader, 1024)
+	if err != nil {
+		panic(err)
+	}
+	bob := dh.NewRSA(pi, qi)
+	h := sha1.New()
+	if n, err := h.Write(secretMessage); n != len(secretMessage) || err != nil {
+		log.Fatal("Error calculating hash")
+	}
+	e := h.Sum(nil)
+	z := new(big.Int).SetBytes(e)
+	d := bob.Decrypt(z)
+	log.Printf("Bob's signature verifies: %v",
+		hmac.Equal(e, bob.Encrypt(d).Bytes()))
+
+	// Find a new
 }
