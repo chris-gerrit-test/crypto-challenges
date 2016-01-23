@@ -68,11 +68,11 @@ func main() {
 	log.Printf("Eve's group generator: %s", eve.Group().Generator())
 	log.Printf("Eve's generator^q: %s", eve.Group().Pow(eve.Group().Generator(), q))
 
-	pi, err := rand.Prime(rand.Reader, 1024)
+	pi, err := rand.Prime(rand.Reader, 256)
 	if err != nil {
 		panic(err)
 	}
-	qi, err := rand.Prime(rand.Reader, 1024)
+	qi, err := rand.Prime(rand.Reader, 256)
 	if err != nil {
 		panic(err)
 	}
@@ -86,6 +86,13 @@ func main() {
 	d := bob.Decrypt(z)
 	log.Printf("Bob's signature verifies: %v",
 		hmac.Equal(e, bob.Encrypt(d).Bytes()))
+
+	ep, err := rand.Prime(rand.Reader, 256)
+	if err != nil {
+		panic(err)
+	}
+	factors := dh.FindFactors(ep, ep, ep, nil)
+	log.Printf("%s", factors)
 
 	// Find a new
 }

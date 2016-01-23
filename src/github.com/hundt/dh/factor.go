@@ -40,20 +40,22 @@ func FindFactors(j, groupSize, target *big.Int, G Group) map[int64]Element {
 		}
 	}
 
-	for factor, _ := range factors {
-		var h Element = nil
-		groupSize := new(big.Int).Set(groupSize)
-		pow := new(big.Int)
-		pow.Div(groupSize, big.NewInt(factor))
-		log.Printf("Finding an element of order %d...", factor)
-		for {
-			h = G.Pow(G.Random(), pow)
-			if h.Cmp(G.Identity()) != 0 {
-				//log.Printf("%s^%d == %s", h, factor, G.Pow(h, big.NewInt(factor)))
-				break
+	if G != nil {
+		for factor, _ := range factors {
+			var h Element = nil
+			groupSize := new(big.Int).Set(groupSize)
+			pow := new(big.Int)
+			pow.Div(groupSize, big.NewInt(factor))
+			log.Printf("Finding an element of order %d...", factor)
+			for {
+				h = G.Pow(G.Random(), pow)
+				if h.Cmp(G.Identity()) != 0 {
+					//log.Printf("%s^%d == %s", h, factor, G.Pow(h, big.NewInt(factor)))
+					break
+				}
 			}
+			factors[factor] = h
 		}
-		factors[factor] = h
 	}
 
 	return factors
