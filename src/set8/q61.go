@@ -34,15 +34,15 @@ func choosePrime(bits int, m, s *big.Int, avoidFactors map[int64]bool) (*big.Int
 		p.SetInt64(2)
 		pFactors = make(map[int64]bool)
 		pFactors[2] = true
-		for i := 0; i < bits/18; i++ {
+		for i := 0; i < bits/16; i++ {
 			f := int64(2)
 			for {
-				f = rnd.Int63n(1 << 20)
+				f = rnd.Int63n(1 << 18)
 				if ok := avoidFactors[f]; ok {
 					continue
 				}
 				ok := pFactors[f]
-				if !ok && big.NewInt(f).ProbablyPrime(8) {
+				if !ok && big.NewInt(f).ProbablyPrime(32) {
 					break
 				}
 			}
@@ -50,7 +50,7 @@ func choosePrime(bits int, m, s *big.Int, avoidFactors map[int64]bool) (*big.Int
 			p.Mul(p, big.NewInt(f))
 		}
 		p.Add(p, big.NewInt(1))
-		if p.ProbablyPrime(8) {
+		if p.ProbablyPrime(32) {
 			pMinus1 := new(big.Int).Sub(p, big.NewInt(1))
 			primRoot := true
 			for f, _ := range pFactors {
@@ -66,6 +66,50 @@ func choosePrime(bits int, m, s *big.Int, avoidFactors map[int64]bool) (*big.Int
 			}
 		}
 	}
+}
+
+func crt(N *big.Int, moduli map[int64]int64) *big.Int {
+	// From Wikipedia CRT page
+	x := new(big.Int)
+	total := N
+	for n, a := range moduli {
+		N := new(big.Int).Set(total)
+		N.Div(N, big.NewInt(n))
+		N.ModInverse(N, big.NewInt(n))
+		N.Mul(N, total)
+		N.Div(N, big.NewInt(n))
+		N.Mul(N, big.NewInt(a))
+		x.Add(x, N)
+		x.Mod(x, total)
+	}
+	return x
+}
+
+// Find x such that e = g^x (mod N)
+func pohlig(e, g, N *big.Int, nFactors map[int64]bool) *big.Int {
+	moduli := make(map[int64]int64)
+	s := new(big.Int)
+	//log.Printf("Pohlig %d", e)
+	NMinus1 := new(big.Int).Sub(N, big.NewInt(1))
+	for f, _ := range nFactors {
+		//log.Printf("%d", f)
+		target := new(big.Int).Div(NMinus1, big.NewInt(f))
+		base := new(big.Int).Exp(g, target, N)
+		target.Exp(e, target, N)
+		seen := make(map[int64]bool)
+		for m := new(big.Int); ; m.Add(m, big.NewInt(1)) {
+			s.Exp(base, m, N)
+			seen[s.Int64()] = true
+			if s.Cmp(target) == 0 {
+				moduli[f] = m.Int64()
+				break
+			}
+			if m.Cmp(new(big.Int).Mul(big.NewInt(f), big.NewInt(2))) >= 0 {
+				log.Panicf("Got too high: %d tried", len(seen))
+			}
+		}
+	}
+	return crt(NMinus1, moduli)
 }
 
 func main() {
@@ -137,11 +181,18 @@ func main() {
 	log.Printf("Bob's signature verifies: %v",
 		hmac.Equal(e, bob.Encrypt(d).Bytes()))
 
-	eveP, evePFactors := choosePrime(keySize/2, z, new(big.Int).SetBytes(d), nil)
+	padM := new(big.Int).SetBytes(d)
+	eveP, evePFactors := choosePrime(keySize/2, z, padM, nil)
 	log.Printf("Eve's p=%d", eveP)
-	eveQ, _ := choosePrime(keySize/2, z, new(big.Int).SetBytes(d), evePFactors)
+	eveQ, eveQFactors := choosePrime(keySize/2, z, padM, evePFactors)
 	log.Printf("Eve's q=%d", eveQ)
 	log.Printf("Eve's N=%d", new(big.Int).Mul(eveQ, eveP))
 
-	// Find a new
+	log.Printf("pad(m) mod %d = %d", eveP, new(big.Int).Mod(padM, eveP))
+	ep := pohlig(padM, z, eveP, evePFactors)
+	log.Printf("%d^%d = %d (mod %d)", z, ep, new(big.Int).Exp(z, ep, eveP), eveP)
+
+	log.Printf("pad(m) mod %d = %d", eveQ, new(big.Int).Mod(padM, eveQ))
+	eq := pohlig(padM, z, eveQ, eveQFactors)
+	log.Printf("%d^%d = %d (mod %d)", z, eq, new(big.Int).Exp(z, eq, eveQ), eveQ)
 }
