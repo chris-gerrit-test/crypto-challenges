@@ -9,6 +9,7 @@ type rsa struct {
 type RSA interface {
 	Encrypt(m []byte) *big.Int
 	Decrypt(c *big.Int) []byte
+	PublicKey() *big.Int
 }
 
 func NewRSA(p, q *big.Int) RSA {
@@ -28,4 +29,8 @@ func (r *rsa) Encrypt(m []byte) *big.Int {
 
 func (r *rsa) Decrypt(c *big.Int) []byte {
 	return new(big.Int).Exp(c, r.d, r.n).Bytes()
+}
+
+func (r *rsa) PublicKey() *big.Int {
+	return new(big.Int).Set(r.e)
 }

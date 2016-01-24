@@ -25,7 +25,7 @@ func Bob(d dh.DiffieHellman, pub dh.Element) []byte {
 
 var rnd = rand.New(rand.NewSource(82480))
 
-var keySize int = 512
+var keySize int = 1024
 
 func choosePrime(bits int, m, s *big.Int, avoidFactors map[int64]bool) (*big.Int, map[int64]bool) {
 	p := new(big.Int)
@@ -34,10 +34,10 @@ func choosePrime(bits int, m, s *big.Int, avoidFactors map[int64]bool) (*big.Int
 		p.SetInt64(2)
 		pFactors = make(map[int64]bool)
 		pFactors[2] = true
-		for i := 0; i < bits/16; i++ {
+		for i := 0; i < bits/14; i++ {
 			f := int64(2)
 			for {
-				f = rnd.Int63n(1 << 18)
+				f = rnd.Int63n(1 << 16)
 				if ok := avoidFactors[f]; ok {
 					continue
 				}
@@ -89,10 +89,8 @@ func crt(N *big.Int, moduli map[int64]int64) *big.Int {
 func pohlig(e, g, N *big.Int, nFactors map[int64]bool) *big.Int {
 	moduli := make(map[int64]int64)
 	s := new(big.Int)
-	//log.Printf("Pohlig %d", e)
 	NMinus1 := new(big.Int).Sub(N, big.NewInt(1))
 	for f, _ := range nFactors {
-		//log.Printf("%d", f)
 		target := new(big.Int).Div(NMinus1, big.NewInt(f))
 		base := new(big.Int).Exp(g, target, N)
 		target.Exp(e, target, N)
@@ -165,34 +163,71 @@ func main() {
 		panic(err)
 	}
 	qi, err := crand.Prime(crand.Reader, keySize/2)
-	log.Printf("Bob's N=%d", new(big.Int).Mul(qi, pi))
 	if err != nil {
 		panic(err)
 	}
 	bob := dh.NewRSA(pi, qi)
+	log.Printf("Bob's (N, e) = (%d, %d)", new(big.Int).Mul(qi, pi), bob.PublicKey())
 	h := sha1.New()
 	if n, err := h.Write(secretMessage); n != len(secretMessage) || err != nil {
 		log.Fatal("Error calculating hash")
 	}
-	e := h.Sum(nil)
+	hashBytes := h.Sum(nil)
 	// Don't feel like implementing padding again
-	z := new(big.Int).SetBytes(e) // "pad(m)" in the problem description
-	d := bob.Decrypt(z)
+	padM := new(big.Int).SetBytes(hashBytes)
+	sigBytes := bob.Decrypt(padM)
 	log.Printf("Bob's signature verifies: %v",
-		hmac.Equal(e, bob.Encrypt(d).Bytes()))
+		hmac.Equal(hashBytes, bob.Encrypt(sigBytes).Bytes()))
 
-	padM := new(big.Int).SetBytes(d)
-	eveP, evePFactors := choosePrime(keySize/2, z, padM, nil)
-	log.Printf("Eve's p=%d", eveP)
-	eveQ, eveQFactors := choosePrime(keySize/2, z, padM, evePFactors)
-	log.Printf("Eve's q=%d", eveQ)
-	log.Printf("Eve's N=%d", new(big.Int).Mul(eveQ, eveP))
+	sig := new(big.Int).SetBytes(sigBytes)
+	eveP, evePFactors := choosePrime(keySize/2, padM, sig, nil)
+	eveQ, eveQFactors := choosePrime(keySize/2, padM, sig, evePFactors)
+	eveN := new(big.Int).Mul(eveP, eveQ)
+	log.Printf("Eve's N' = %d", eveN)
 
-	log.Printf("pad(m) mod %d = %d", eveP, new(big.Int).Mod(padM, eveP))
-	ep := pohlig(padM, z, eveP, evePFactors)
-	log.Printf("%d^%d = %d (mod %d)", z, ep, new(big.Int).Exp(z, ep, eveP), eveP)
+	ep := pohlig(padM, sig, eveP, evePFactors)
 
-	log.Printf("pad(m) mod %d = %d", eveQ, new(big.Int).Mod(padM, eveQ))
-	eq := pohlig(padM, z, eveQ, eveQFactors)
-	log.Printf("%d^%d = %d (mod %d)", z, eq, new(big.Int).Exp(z, eq, eveQ), eveQ)
+	eq := pohlig(padM, sig, eveQ, eveQFactors)
+
+	evePhi := new(big.Int).Set(eveN)
+	evePhi.Sub(evePhi, eveP)
+	evePhi.Sub(evePhi, eveQ)
+	evePhi.Add(evePhi, big.NewInt(1))
+
+	// From Wikipedia CRT page
+	eveModuli := make(map[*big.Int]*big.Int)
+	newP := new(big.Int).Sub(eveP, big.NewInt(1))
+	newQ := new(big.Int).Sub(eveQ, big.NewInt(1))
+	// Remove "2" factor so CRT works.
+	newP.Div(newP, big.NewInt(2))
+	newQ.Div(newQ, big.NewInt(2))
+	eveModuli[newP] = new(big.Int).Mod(ep, newP)
+	eveModuli[newQ] = new(big.Int).Mod(eq, newQ)
+	if new(big.Int).Mod(eq, big.NewInt(2)).Cmp(new(big.Int).Mod(ep, big.NewInt(2))) != 0 {
+		log.Fatal("ep and eq are not compatible and CRT won't work")
+	}
+	eveModuli[big.NewInt(4)] = new(big.Int).Mod(eq, big.NewInt(4))
+	eveE := new(big.Int)
+	for n, a := range eveModuli {
+		N := new(big.Int).Set(evePhi)
+		scratch := new(big.Int)
+		scratch.Mod(N, n)
+		if scratch.Cmp(new(big.Int)) != 0 {
+			log.Fatalf("hmm %d / %d", N, n)
+		}
+		N.Div(N, n)
+		scratch.GCD(nil, nil, N, n)
+		if scratch.Cmp(big.NewInt(1)) != 0 {
+			log.Fatalf("GCD: %d", scratch)
+		}
+		N.ModInverse(N, n)
+		N.Mul(N, evePhi)
+		N.Div(N, n)
+		N.Mul(N, a)
+		eveE.Add(eveE, N)
+		eveE.Mod(eveE, evePhi)
+	}
+	log.Printf("Eve's e' = %d", eveE)
+	log.Printf("Eve's signature verifies: %v",
+		hmac.Equal(hashBytes, new(big.Int).Exp(sig, eveE, eveN).Bytes()))
 }
