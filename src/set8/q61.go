@@ -110,6 +110,60 @@ func pohlig(e, g, N *big.Int, nFactors map[int64]bool) *big.Int {
 	return crt(NMinus1, moduli)
 }
 
+// Returns (N, e, d) of the given size that encrypts decBytes to encBytes
+func chosenEncrytion(decBytes, encBytes []byte, keySize int) (N, e, d *big.Int) {
+	padM := new(big.Int).SetBytes(encBytes)
+	sig := new(big.Int).SetBytes(decBytes)
+	eveP, evePFactors := choosePrime(keySize/2, padM, sig, nil)
+	eveQ, eveQFactors := choosePrime(keySize/2, padM, sig, evePFactors)
+	eveN := new(big.Int).Mul(eveP, eveQ)
+
+	ep := pohlig(padM, sig, eveP, evePFactors)
+
+	eq := pohlig(padM, sig, eveQ, eveQFactors)
+
+	evePhi := new(big.Int).Set(eveN)
+	evePhi.Sub(evePhi, eveP)
+	evePhi.Sub(evePhi, eveQ)
+	evePhi.Add(evePhi, big.NewInt(1))
+
+	// From Wikipedia CRT page
+	eveModuli := make(map[*big.Int]*big.Int)
+	newP := new(big.Int).Sub(eveP, big.NewInt(1))
+	newQ := new(big.Int).Sub(eveQ, big.NewInt(1))
+	// Remove "2" factor so CRT works.
+	newP.Div(newP, big.NewInt(2))
+	newQ.Div(newQ, big.NewInt(2))
+	eveModuli[newP] = new(big.Int).Mod(ep, newP)
+	eveModuli[newQ] = new(big.Int).Mod(eq, newQ)
+	if new(big.Int).Mod(eq, big.NewInt(2)).Cmp(new(big.Int).Mod(ep, big.NewInt(2))) != 0 {
+		log.Fatal("ep and eq are not compatible and CRT won't work")
+	}
+	eveModuli[big.NewInt(4)] = new(big.Int).Mod(eq, big.NewInt(4))
+	eveE := new(big.Int)
+	for n, a := range eveModuli {
+		N := new(big.Int).Set(evePhi)
+		scratch := new(big.Int)
+		scratch.Mod(N, n)
+		if scratch.Cmp(new(big.Int)) != 0 {
+			log.Fatalf("hmm %d / %d", N, n)
+		}
+		N.Div(N, n)
+		scratch.GCD(nil, nil, N, n)
+		if scratch.Cmp(big.NewInt(1)) != 0 {
+			log.Fatalf("GCD: %d", scratch)
+		}
+		N.ModInverse(N, n)
+		N.Mul(N, evePhi)
+		N.Div(N, n)
+		N.Mul(N, a)
+		eveE.Add(eveE, N)
+		eveE.Mod(eveE, evePhi)
+	}
+
+	return eveN, eveE, new(big.Int).ModInverse(eveE, evePhi)
+}
+
 func main() {
 	p, _ := new(big.Int).SetString("233970423115425145524320034830162017933", 10)
 	a := big.NewInt(-95051)
@@ -174,60 +228,33 @@ func main() {
 	}
 	hashBytes := h.Sum(nil)
 	// Don't feel like implementing padding again
-	padM := new(big.Int).SetBytes(hashBytes)
-	sigBytes := bob.Decrypt(padM)
+	sigBytes := bob.Decrypt(new(big.Int).SetBytes(hashBytes))
 	log.Printf("Bob's signature verifies: %v",
 		hmac.Equal(hashBytes, bob.Encrypt(sigBytes).Bytes()))
 
-	sig := new(big.Int).SetBytes(sigBytes)
-	eveP, evePFactors := choosePrime(keySize/2, padM, sig, nil)
-	eveQ, eveQFactors := choosePrime(keySize/2, padM, sig, evePFactors)
-	eveN := new(big.Int).Mul(eveP, eveQ)
-	log.Printf("Eve's N' = %d", eveN)
-
-	ep := pohlig(padM, sig, eveP, evePFactors)
-
-	eq := pohlig(padM, sig, eveQ, eveQFactors)
-
-	evePhi := new(big.Int).Set(eveN)
-	evePhi.Sub(evePhi, eveP)
-	evePhi.Sub(evePhi, eveQ)
-	evePhi.Add(evePhi, big.NewInt(1))
-
-	// From Wikipedia CRT page
-	eveModuli := make(map[*big.Int]*big.Int)
-	newP := new(big.Int).Sub(eveP, big.NewInt(1))
-	newQ := new(big.Int).Sub(eveQ, big.NewInt(1))
-	// Remove "2" factor so CRT works.
-	newP.Div(newP, big.NewInt(2))
-	newQ.Div(newQ, big.NewInt(2))
-	eveModuli[newP] = new(big.Int).Mod(ep, newP)
-	eveModuli[newQ] = new(big.Int).Mod(eq, newQ)
-	if new(big.Int).Mod(eq, big.NewInt(2)).Cmp(new(big.Int).Mod(ep, big.NewInt(2))) != 0 {
-		log.Fatal("ep and eq are not compatible and CRT won't work")
-	}
-	eveModuli[big.NewInt(4)] = new(big.Int).Mod(eq, big.NewInt(4))
-	eveE := new(big.Int)
-	for n, a := range eveModuli {
-		N := new(big.Int).Set(evePhi)
-		scratch := new(big.Int)
-		scratch.Mod(N, n)
-		if scratch.Cmp(new(big.Int)) != 0 {
-			log.Fatalf("hmm %d / %d", N, n)
-		}
-		N.Div(N, n)
-		scratch.GCD(nil, nil, N, n)
-		if scratch.Cmp(big.NewInt(1)) != 0 {
-			log.Fatalf("GCD: %d", scratch)
-		}
-		N.ModInverse(N, n)
-		N.Mul(N, evePhi)
-		N.Div(N, n)
-		N.Mul(N, a)
-		eveE.Add(eveE, N)
-		eveE.Mod(eveE, evePhi)
-	}
-	log.Printf("Eve's e' = %d", eveE)
+	eveN, eveE, _ := chosenEncrytion(sigBytes, hashBytes, keySize)
+	log.Printf("Eve's (N', e') = (%d, %d)", eveN, eveE)
 	log.Printf("Eve's signature verifies: %v",
-		hmac.Equal(hashBytes, new(big.Int).Exp(sig, eveE, eveN).Bytes()))
+		hmac.Equal(hashBytes, new(big.Int).Exp(new(big.Int).SetBytes(sigBytes), eveE, eveN).Bytes()))
+
+	log.Printf("========== PART 3 ==========")
+	original := []byte("Transfer $100 from Chris to the Treasury")
+	desired := []byte("Transfer $1,000,000 from the Treasury to Chris")
+	pi, err = crand.Prime(crand.Reader, keySize/2)
+	if err != nil {
+		panic(err)
+	}
+	qi, err = crand.Prime(crand.Reader, keySize/2)
+	if err != nil {
+		panic(err)
+	}
+	bob = dh.NewRSA(pi, qi)
+	log.Printf("Bob's (N, e) = (%d, %d)", new(big.Int).Mul(qi, pi), bob.PublicKey())
+	enc := bob.Encrypt(original)
+	eveN, eveE, eveD := chosenEncrytion(desired, enc.Bytes(), keySize)
+	log.Printf("Eve's (N', e', d') = (%d, %d, %d)", eveN, eveE, eveD)
+	if eveN.Cmp(new(big.Int).SetBytes(desired)) < 0 {
+		log.Panic("Eve's key is too small")
+	}
+	log.Printf("Decrypted: %s", new(big.Int).Exp(enc, eveD, eveN).Bytes())
 }
