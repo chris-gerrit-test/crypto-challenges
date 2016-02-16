@@ -7,7 +7,31 @@ import (
 
 type Vector []*big.Rat
 
-type Matrix []*Vector
+type Matrix []Vector
+
+func (m Matrix) String() string {
+	s := "("
+	for _, v := range m {
+		s += "\n "
+		s += v.String()
+	}
+	return s + "\n)"
+}
+
+func (m Matrix) GramSchmidt() Matrix {
+	if len(m) == 0 {
+		return m
+	}
+	p := m[0].Copy()
+	for i, vi := range m {
+		for j := i + 1; j < len(m); j++ {
+			vj := m[j]
+			p.Set(vj).Proj(vi)
+			vj.Sub(p)
+		}
+	}
+	return m
+}
 
 func (v1 Vector) Add(v2 Vector) Vector {
 	if len(v1) != len(v2) {
@@ -15,6 +39,16 @@ func (v1 Vector) Add(v2 Vector) Vector {
 	}
 	for i, e := range v1 {
 		e.Add(e, v2[i])
+	}
+	return v1
+}
+
+func (v1 Vector) Sub(v2 Vector) Vector {
+	if len(v1) != len(v2) {
+		log.Fatalf("Lengths differ: %d != %d", len(v1), len(v2))
+	}
+	for i, e := range v1 {
+		e.Sub(e, v2[i])
 	}
 	return v1
 }

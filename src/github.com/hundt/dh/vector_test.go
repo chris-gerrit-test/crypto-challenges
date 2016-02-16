@@ -90,6 +90,33 @@ func TestAdd(t *testing.T) {
 	}
 }
 
+func TestSub(t *testing.T) {
+	v1 := Vector([]*big.Rat{
+		big.NewRat(1, 2),
+		big.NewRat(3, 4)})
+	v2 := Vector([]*big.Rat{
+		big.NewRat(1, 3),
+		big.NewRat(3, 5)})
+
+	v3 := v1.Copy()
+	v4 := Vector([]*big.Rat{
+		big.NewRat(1, 6),
+		big.NewRat(3, 20)})
+	v3.Sub(v2)
+	if !v3.Eq(v4) {
+		t.Errorf("%s - %s should equal %s, not %s", v1, v2, v4, v3)
+	}
+
+	v3 = v2.Copy()
+	v4 = Vector([]*big.Rat{
+		big.NewRat(-1, 6),
+		big.NewRat(-3, 20)})
+	v3.Sub(v1)
+	if !v3.Eq(v4) {
+		t.Errorf("%s - %s should equal %s, not %s", v2, v1, v4, v3)
+	}
+}
+
 func TestProject(t *testing.T) {
 	v1 := Vector([]*big.Rat{
 		big.NewRat(2, 1),
