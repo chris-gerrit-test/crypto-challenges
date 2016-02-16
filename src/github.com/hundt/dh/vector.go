@@ -51,6 +51,16 @@ func (v1 Vector) Copy() Vector {
 	return v2
 }
 
+func (v1 Vector) Set(v2 Vector) Vector {
+	if len(v1) != len(v2) {
+		log.Fatalf("Lengths differ: %d != %d", len(v1), len(v2))
+	}
+	for i, e := range v1 {
+		e.Set(v2[i])
+	}
+	return v1
+}
+
 func (v Vector) String() string {
 	s := "("
 	for i, e := range v {
@@ -60,4 +70,20 @@ func (v Vector) String() string {
 		s += e.String()
 	}
 	return s + ")"
+}
+
+func (v Vector) Scale(r *big.Rat) Vector {
+	for _, e := range v {
+		e.Mul(e, r)
+	}
+	return v
+}
+
+func (v1 Vector) Proj(v2 Vector) Vector {
+	u1 := v1.Copy()
+	u2 := v2.Copy()
+	d1 := u1.Dot(v2)
+	d1.Quo(d1, u2.Dot(v2))
+	v1.Set(v2).Scale(d1)
+	return v1
 }
