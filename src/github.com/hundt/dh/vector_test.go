@@ -153,3 +153,124 @@ func TestProject(t *testing.T) {
 		t.Errorf("%s projected onto %s should equal %s, not %s", v1, v2, v4, v3)
 	}
 }
+
+func TestRound(t *testing.T) {
+	r1 := big.NewRat(1, 2)
+	actual := Round(new(big.Rat).Set(r1))
+	expected := big.NewRat(1, 1)
+	if actual.Cmp(expected) != 0 {
+		t.Errorf("round(%s) should equal %s, not %s", r1, expected, actual)
+	}
+	r1 = big.NewRat(1, 3)
+	actual = Round(new(big.Rat).Set(r1))
+	expected = big.NewRat(0, 1)
+	if actual.Cmp(expected) != 0 {
+		t.Errorf("round(%s) should equal %s, not %s", r1, expected, actual)
+	}
+	r1 = big.NewRat(5, 3)
+	actual = Round(new(big.Rat).Set(r1))
+	expected = big.NewRat(2, 1)
+	if actual.Cmp(expected) != 0 {
+		t.Errorf("round(%s) should equal %s, not %s", r1, expected, actual)
+	}
+}
+
+func TestLLL(t *testing.T) {
+	// Cryptopals example
+	m := Matrix([]Vector{
+		Vector([]*big.Rat{
+			big.NewRat(-2, 1),
+			big.NewRat(0, 1),
+			big.NewRat(2, 1),
+			big.NewRat(0, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(1, 2),
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(0, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(-2, 1),
+			big.NewRat(1, 2),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 1),
+			big.NewRat(1, 1),
+			big.NewRat(1, 1),
+			big.NewRat(2, 1),
+		}),
+	})
+	expected := Matrix([]Vector{
+		Vector([]*big.Rat{
+			big.NewRat(1, 2),
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(0, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(-2, 1),
+			big.NewRat(1, 2),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 2),
+			big.NewRat(0, 1),
+			big.NewRat(1, 1),
+			big.NewRat(2, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-3, 2),
+			big.NewRat(-1, 1),
+			big.NewRat(2, 1),
+			big.NewRat(0, 1),
+		}),
+	})
+	actual := m.Copy().LLL(big.NewRat(99, 100))
+	if !actual.Eq(expected) {
+		t.Errorf("LLL of:\n%s should equal:\n%s not:\n%s", m, expected, actual)
+	}
+
+	// Wikipedia example
+	m = Matrix([]Vector{
+		Vector([]*big.Rat{
+			big.NewRat(1, 1),
+			big.NewRat(1, 1),
+			big.NewRat(1, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(2, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(3, 1),
+			big.NewRat(5, 1),
+			big.NewRat(6, 1),
+		}),
+	})
+	expected = Matrix([]Vector{
+		Vector([]*big.Rat{
+			big.NewRat(0, 1),
+			big.NewRat(1, 1),
+			big.NewRat(0, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(1, 1),
+		}),
+		Vector([]*big.Rat{
+			big.NewRat(-1, 1),
+			big.NewRat(0, 1),
+			big.NewRat(2, 1),
+		}),
+	})
+	actual = m.Copy().LLL(big.NewRat(99, 100))
+	if !actual.Eq(expected) {
+		t.Errorf("LLL of:\n%s should equal:\n%s not:\n%s", m, expected, actual)
+	}
+}
