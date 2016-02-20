@@ -50,6 +50,54 @@ func (m Matrix) GramSchmidt() Matrix {
 	return m
 }
 
+func (m Matrix) fixAfterUpdated(updated int) Matrix {
+	if len(m) == 0 {
+		return m
+	}
+	p := m[0].Copy() // temp storage
+	vj := m[updated]
+	for i := 0; i < updated; i++ {
+		vi := m[i]
+		p.Set(vj).Proj(vi)
+		vj.Sub(p)
+	}
+	// Adjust vectors after the updated ones
+	for i := updated; i < len(m)-1; i++ {
+		vi := m[i]
+		norm := vi.Dot(vi)
+		for j := i + 1; j < len(m); j++ {
+			vj := m[j]
+			p.Set(vj).fastProj(vi, norm)
+			vj.Sub(p)
+		}
+	}
+	return m
+}
+
+func (m Matrix) fixUpdated(first, last int) Matrix {
+	if len(m) == 0 {
+		return m
+	}
+	p := m[0].Copy() // temp storage
+	for i := 0; i < first; i++ {
+		vi := m[i]
+		norm := vi.Dot(vi)
+
+		vj := m[first]
+		p.Set(vj).fastProj(vi, norm)
+		vj.Sub(p)
+
+		vj = m[last]
+		p.Set(vj).fastProj(vi, norm)
+		vj.Sub(p)
+	}
+	vi := m[first]
+	vj := m[last]
+	p.Set(vj).Proj(vi)
+	vj.Sub(p)
+	return m
+}
+
 func mu(b, q Matrix, i, j int) *big.Rat {
 	v := b[i]
 	u := q[j]
@@ -82,7 +130,8 @@ func (b Matrix) LLL(delta *big.Rat) Matrix {
 				v := b[j].Copy()
 				m := mu(b, q, k, j)
 				b[k].Sub(v.Scale(Round(m)))
-				q = b.Copy().GramSchmidt()
+				q[k].Set(b[k].Copy())
+				q.fixAfterUpdated(k)
 			}
 		}
 
@@ -95,12 +144,12 @@ func (b Matrix) LLL(delta *big.Rat) Matrix {
 		if lhs.Cmp(rhs) >= 0 {
 			k += 1
 		} else {
-			for i := 0; i < len(b[k]); i++ {
-				temp := new(big.Rat).Set(b[k][i])
-				b[k][i].Set(b[k-1][i])
-				b[k-1][i].Set(temp)
-			}
-			q = b.Copy().GramSchmidt()
+			temp := b[k].Copy()
+			b[k].Set(b[k-1])
+			b[k-1].Set(temp)
+			q[k].Set(b[k])
+			q[k-1].Set(b[k-1])
+			q.fixUpdated(k-1, k)
 			k -= 1
 			if k < 1 {
 				k = 1
@@ -189,6 +238,25 @@ func (v Vector) Scale(r *big.Rat) Vector {
 		e.Mul(e, r)
 	}
 	return v
+}
+
+func (v1 Vector) fastProj(v2 Vector, v2Norm *big.Rat) Vector {
+	isZero := true
+	for _, e := range v2 {
+		if e.Cmp(big.NewRat(0, 1)) != 0 {
+			isZero = false
+			break
+		}
+	}
+	if isZero {
+		v1.Set(v2)
+	} else {
+		u1 := v1.Copy()
+		d1 := u1.Dot(v2)
+		d1.Quo(d1, v2Norm)
+		v1.Set(v2).Scale(d1)
+	}
+	return v1
 }
 
 func (v1 Vector) Proj(v2 Vector) Vector {
