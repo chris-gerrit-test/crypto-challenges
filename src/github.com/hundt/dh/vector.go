@@ -64,7 +64,7 @@ func (m Matrix) fixAfterUpdated(updated int) Matrix {
 	// Adjust vectors after the updated ones
 	for i := updated; i < len(m)-1; i++ {
 		vi := m[i]
-		norm := vi.Dot(vi)
+		norm := vi.fastDot(vi)
 		for j := i + 1; j < len(m); j++ {
 			vj := m[j]
 			p.Set(vj).fastProj(vi, norm)
@@ -81,7 +81,7 @@ func (m Matrix) fixUpdated(first, last int) Matrix {
 	p := m[0].Copy() // temp storage
 	for i := 0; i < first; i++ {
 		vi := m[i]
-		norm := vi.Dot(vi)
+		norm := vi.fastDot(vi)
 
 		vj := m[first]
 		p.Set(vj).fastProj(vi, norm)
@@ -101,8 +101,8 @@ func (m Matrix) fixUpdated(first, last int) Matrix {
 func mu(b, q Matrix, i, j int) *big.Rat {
 	v := b[i]
 	u := q[j]
-	d := v.Dot(u)
-	return d.Quo(d, u.Dot(u))
+	d := v.fastDot(u)
+	return d.Quo(d, u.fastDot(u))
 }
 
 func Round(r *big.Rat) *big.Rat {
@@ -127,16 +127,24 @@ func (b Matrix) LLL(delta *big.Rat) Matrix {
 			m := mu(b, q, k, j)
 			m.Abs(m)
 			if m.Cmp(big.NewRat(1, 2)) > 0 {
+				// q2 := b.Copy().GramSchmidt()
+				// if !q.Eq(q2) {
+				// 	log.Fatalf("Already not orthogonal")
+				// }
 				v := b[j].Copy()
 				m := mu(b, q, k, j)
 				b[k].Sub(v.Scale(Round(m)))
 				q[k].Set(b[k].Copy())
 				q.fixAfterUpdated(k)
+				// q2 = b.Copy().GramSchmidt()
+				// if !q.Eq(q2) {
+				// 	log.Fatalf("you fucked up A: (k=%d)\n%s\n%s", k, q, q2)
+				// }
 			}
 		}
 
-		lhs := q[k].Dot(q[k])
-		rhs := q[k-1].Dot(q[k-1])
+		lhs := q[k].fastDot(q[k])
+		rhs := q[k-1].fastDot(q[k-1])
 		m := mu(b, q, k, k-1)
 		m.Mul(m, m)
 		m.Sub(delta, m)
@@ -144,12 +152,20 @@ func (b Matrix) LLL(delta *big.Rat) Matrix {
 		if lhs.Cmp(rhs) >= 0 {
 			k += 1
 		} else {
+			// q2 := b.Copy().GramSchmidt()
+			// if !q.Eq(q2) {
+			// 	log.Fatalf("Already not orthogonal")
+			// }
 			temp := b[k].Copy()
 			b[k].Set(b[k-1])
 			b[k-1].Set(temp)
 			q[k].Set(b[k])
 			q[k-1].Set(b[k-1])
 			q.fixUpdated(k-1, k)
+			// q2 = b.Copy().GramSchmidt()
+			// if !q.Eq(q2) {
+			// 	log.Fatalf("you fucked up B: (k=%d)\n%s\n%s", k, q, q2)
+			// }
 			k -= 1
 			if k < 1 {
 				k = 1
@@ -190,6 +206,32 @@ func (v1 Vector) Eq(v2 Vector) bool {
 		}
 	}
 	return true
+}
+
+func (v Vector) totalDenom() *big.Int {
+	d := big.NewInt(1)
+	for _, e := range v {
+		d.Mul(d, e.Denom())
+	}
+	return d
+}
+
+func (v1 Vector) fastDot(v2 Vector) *big.Rat {
+	if len(v1) != len(v2) {
+		log.Fatalf("Lengths differ: %d != %d", len(v1), len(v2))
+	}
+	denom := v1.totalDenom()
+	denom.Mul(denom, v2.totalDenom())
+	temp := new(big.Int)
+	num := new(big.Int)
+	for i, e := range v1 {
+		temp.Mul(e.Denom(), v2[i].Denom())
+		temp.Div(denom, temp)
+		temp.Mul(temp, e.Num())
+		temp.Mul(temp, v2[i].Num())
+		num.Add(num, temp)
+	}
+	return new(big.Rat).SetFrac(num, denom)
 }
 
 func (v1 Vector) Dot(v2 Vector) *big.Rat {
@@ -252,7 +294,7 @@ func (v1 Vector) fastProj(v2 Vector, v2Norm *big.Rat) Vector {
 		v1.Set(v2)
 	} else {
 		u1 := v1.Copy()
-		d1 := u1.Dot(v2)
+		d1 := u1.fastDot(v2)
 		d1.Quo(d1, v2Norm)
 		v1.Set(v2).Scale(d1)
 	}
@@ -272,8 +314,8 @@ func (v1 Vector) Proj(v2 Vector) Vector {
 	} else {
 		u1 := v1.Copy()
 		u2 := v2.Copy()
-		d1 := u1.Dot(v2)
-		d1.Quo(d1, u2.Dot(v2))
+		d1 := u1.fastDot(v2)
+		d1.Quo(d1, u2.fastDot(v2))
 		v1.Set(v2).Scale(d1)
 	}
 	return v1

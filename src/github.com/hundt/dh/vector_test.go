@@ -52,6 +52,20 @@ func TestDot(t *testing.T) {
 	}
 }
 
+func TestFastDot(t *testing.T) {
+	v1 := Vector([]*big.Rat{
+		big.NewRat(1, 2),
+		big.NewRat(2, 3)})
+	v2 := Vector([]*big.Rat{
+		big.NewRat(1, 3),
+		big.NewRat(5, 4)})
+	actual := v1.fastDot(v2)
+	expected := big.NewRat(1, 1)
+	if expected.Cmp(actual) != 0 {
+		t.Errorf("%s.%s should equal %s, not %s", v1, v2, expected, actual)
+	}
+}
+
 func TestScale(t *testing.T) {
 	v := Vector([]*big.Rat{
 		big.NewRat(1, 2),
