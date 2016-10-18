@@ -228,8 +228,8 @@ q61:
 
 q62:
 	GOPATH=$(GOPATH) go test github.com/hundt/dh -test.v
-	# GOPATH=$(GOPATH) go build -o bin/q62 src/set8/q62.go
-	# bin/q62
+	GOPATH=$(GOPATH) go build -o bin/q62 src/set8/q62.go
+	time bin/q62
 
 set1: q1 q2 q3 q4 q5 q6 q7 q8
 
