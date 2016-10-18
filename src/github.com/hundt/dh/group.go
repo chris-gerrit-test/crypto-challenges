@@ -23,6 +23,13 @@ type Group interface {
 	Identity() Element
 }
 
+type Field interface {
+	Group
+	Add(x, y Element) Element
+	Sub(x, y Element) Element
+	Zero() Element
+}
+
 type CyclicGroup interface {
 	Group
 	Generator() Element
@@ -39,7 +46,7 @@ type finiteGroup struct {
 	p *big.Int
 }
 
-func NewFiniteGroup(p big.Int) Group {
+func NewFiniteGroup(p big.Int) Field {
 	return &finiteGroup{p: &p}
 }
 
@@ -69,11 +76,33 @@ func (pg *finiteGroup) Identity() Element {
 	return &finiteElement{n: big.NewInt(1)}
 }
 
+func (pg *finiteGroup) Zero() Element {
+	return &finiteElement{n: new(big.Int)}
+}
+
 func (pg *finiteGroup) Op(x, y Element) Element {
 	px := x.(*finiteElement)
 	py := y.(*finiteElement)
 	z := new(big.Int)
 	z.Mul(px.n, py.n)
+	z.Mod(z, pg.p)
+	return &finiteElement{n: z}
+}
+
+func (pg *finiteGroup) Add(x, y Element) Element {
+	px := x.(*finiteElement)
+	py := y.(*finiteElement)
+	z := new(big.Int)
+	z.Add(px.n, py.n)
+	z.Mod(z, pg.p)
+	return &finiteElement{n: z}
+}
+
+func (pg *finiteGroup) Sub(x, y Element) Element {
+	px := x.(*finiteElement)
+	py := y.(*finiteElement)
+	z := new(big.Int)
+	z.Sub(px.n, py.n)
 	z.Mod(z, pg.p)
 	return &finiteElement{n: z}
 }
