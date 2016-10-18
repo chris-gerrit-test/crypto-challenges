@@ -11,10 +11,19 @@ type ecdsa struct {
 	key *big.Int
 }
 
+type biasedEcdsa struct {
+	*ecdsa
+	bias uint
+}
+
 type ECDSA interface {
 	Group() CyclicGroup
 	PublicKey() Element
 	Sign(m []byte) (*big.Int, *big.Int)
+}
+
+type BiasedECDSA interface {
+	ECDSA
 }
 
 // the generator of g should come from NewEllipticCurveElement
@@ -25,6 +34,47 @@ func NewECDSA(g CyclicGroup) ECDSA {
 		d.key.Rand(rnd, n)
 	}
 	return d
+}
+
+// the generator of g should come from NewEllipticCurveElement
+func NewBiasedECDSA(g CyclicGroup, bias uint) ECDSA {
+	n := g.Size()
+	d := &biasedEcdsa{bias: bias, ecdsa: &ecdsa{g: g, key: new(big.Int)}}
+	for d.key.Cmp(new(big.Int)) == 0 {
+		d.key.Rand(rnd, n)
+	}
+	log.Printf("key:        %x", d.key)
+	return d
+}
+
+func (d *biasedEcdsa) Sign(m []byte) (*big.Int, *big.Int) {
+	h := sha1.New()
+	if n, err := h.Write(m); n != len(m) || err != nil {
+		log.Fatal("Error calculating hash")
+	}
+	e := h.Sum(nil)
+	r, s := new(big.Int), new(big.Int)
+	n := d.g.Size()
+	z := new(big.Int).SetBytes(e)
+	z.Mod(z, n)
+	for r.Cmp(new(big.Int)) == 0 || s.Cmp(new(big.Int)) == 0 {
+		k := new(big.Int).Rand(rnd, n)
+		if k.Cmp(new(big.Int)) == 0 {
+			continue
+		}
+		log.Printf("Original k: %x", k)
+		k.Div(k, big.NewInt(1<<d.bias)).Mul(k, big.NewInt(1<<d.bias))
+		log.Printf("Biased k:   %x", k)
+		p := d.g.Pow(d.g.Generator(), k)
+		r.Mod(p.(*ellipticCurveElement).x, n)
+
+		k.ModInverse(k, n)
+		s.Mul(r, d.key)
+		s.Add(s, z)
+		s.Mul(s, k)
+		s.Mod(s, n)
+	}
+	return r, s
 }
 
 func (d *ecdsa) PublicKey() Element {
