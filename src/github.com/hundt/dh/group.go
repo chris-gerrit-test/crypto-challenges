@@ -18,6 +18,7 @@ func jump(x *big.Int, k int) int {
 
 type Group interface {
 	Op(x, y Element) Element
+	Inverse(x Element) Element
 	Pow(x Element, y *big.Int) Element
 	Random() Element
 	Identity() Element
@@ -74,6 +75,10 @@ func (n *finiteElement) Cmp(e Element) int {
 
 func (pg *finiteGroup) Identity() Element {
 	return &finiteElement{n: big.NewInt(1)}
+}
+
+func (pg *finiteGroup) Inverse(e Element) Element {
+	return &finiteElement{n: new(big.Int).ModInverse(e.(*finiteElement).n, pg.p)}
 }
 
 func (pg *finiteGroup) Zero() Element {
@@ -152,6 +157,11 @@ func (gg *generatedGroup) Random() Element {
 
 func (gg *generatedGroup) Identity() Element {
 	return gg.g.Identity()
+}
+
+func (gg *generatedGroup) Inverse(e Element) Element {
+	log.Fatal("not implemented")
+	return nil
 }
 
 func (gg *generatedGroup) Generator() Element {
@@ -344,6 +354,11 @@ func (gg *ellipticCurve) Identity() Element {
 	return inf
 }
 
+func (gg *ellipticCurve) Inverse(e Element) Element {
+	log.Fatal("not implemented")
+	return nil
+}
+
 type montgomeryCurve struct {
 	A, B    *big.Int
 	modulus *big.Int
@@ -524,4 +539,9 @@ func (gg *montgomeryCurve) Identity() Element {
 	return &montgomeryCurveElement{
 		u: new(big.Int),
 	}
+}
+
+func (gg *montgomeryCurve) Inverse(e Element) Element {
+	log.Fatal("not implemented")
+	return nil
 }

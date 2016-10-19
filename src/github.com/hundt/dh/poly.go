@@ -24,17 +24,59 @@ func NewPolyElement(f Field, cs []Element) Element {
 }
 
 func (f *polyField) Identity() Element {
-	return &finiteElement{n: big.NewInt(1)}
+	log.Panic("not implemented")
+	return nil
+}
+
+func (f *polyField) Inverse(e Element) Element {
+	log.Fatal("not implemented")
+	return nil
 }
 
 func (f *polyField) Zero() Element {
-	log.Fatal("not implemented")
-	return nil
+	sums := make([]Element, len(f.p.cs)-1)
+	for i, _ := range sums {
+		sums[i] = f.p.f.Zero()
+	}
+	return NewPolyElement(f.p.f, sums).(*polyElement)
 }
 
 func (f *polyField) Op(x, y Element) Element {
-	log.Fatal("not implemented")
-	return nil
+	p1 := x.(*polyElement)
+	p2 := y.(*polyElement)
+	// make copies
+	p1 = f.Sub(p1, f.Zero()).(*polyElement)
+	p2 = f.Sub(p2, f.Zero()).(*polyElement)
+	p := f.Zero().(*polyElement)
+
+	zero := p1.f.Zero()
+	for _ = range p1.cs {
+		log.Printf("%d %d %d", len(p2.cs), len(p1.cs), len(f.p.cs))
+		log.Printf("\na = %s\nb = %s", p1, p2)
+		for i, c2 := range p2.cs {
+			p.cs[i] = p.f.Add(p.cs[i], p.f.Op(p1.cs[0], c2))
+		}
+
+		p1.cs = append(p1.cs[1:len(p1.cs)], p1.f.Zero())
+		p2.cs = append([]Element{p2.f.Zero()}, p2.cs...)
+		log.Printf("\na = %s\nb = %s", p1, p2)
+
+		hi := p2.cs[len(p2.cs)-1]
+		if hi.Cmp(zero) != 0 {
+			log.Printf("modding %s", p2)
+			for i, c2 := range p2.cs {
+				p2.cs[i] = p2.f.Sub(c2, p2.f.Op(hi, f.p.cs[i]))
+			}
+			log.Printf("got %s", p2)
+		}
+		if p2.cs[len(p2.cs)-1].Cmp(zero) != 0 {
+			panic("modding didn't work")
+		}
+
+		p2.cs = p2.cs[0 : len(p2.cs)-1]
+	}
+
+	return p
 }
 
 func mod(e *polyElement, f *polyField) {
@@ -73,12 +115,12 @@ func (f *polyField) Sub(x, y Element) Element {
 }
 
 func (f *polyField) Pow(x Element, y *big.Int) Element {
-	log.Fatal("not implemented")
+	log.Panic("not implemented")
 	return nil
 }
 
 func (f *polyField) Random() Element {
-	log.Fatal("not implemented")
+	log.Panic("not implemented")
 	return nil
 }
 
@@ -112,9 +154,20 @@ func (p *polyElement) Jump(k int) int {
 
 func (p *polyElement) Cmp(e Element) int {
 	p2 := e.(*polyElement)
-	for i := len(p.cs) - 1; i >= 0; i-- {
-		c1 := p.cs[i]
-		c2 := p2.cs[i]
+	l := len(p.cs)
+	if len(p2.cs) > l {
+		l = len(p2.cs)
+	}
+	zero := p.f.Zero()
+	for i := l; i >= 0; i-- {
+		c1 := zero
+		c2 := zero
+		if l < len(p.cs) {
+			c1 = p.cs[i]
+		}
+		if l < len(p2.cs) {
+			c2 = p2.cs[i]
+		}
 		cmp := c1.Cmp(c2)
 		if cmp != 0 {
 			return cmp
