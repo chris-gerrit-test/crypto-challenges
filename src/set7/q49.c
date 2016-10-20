@@ -64,13 +64,6 @@ int main() {
 
     printf("\n*** ATTACK 2 ***\n");
     // Attack 2: IV is fixed at zero
-    //
-    // Not sure about this one. Wikipedia describes a length extension
-    // attack, but it only allows me to concatenate previously signed
-    // messages (with one of them XORed by the other's MAC). I don't see
-    // how to get the client to sign those. When I look at other people's
-    // solutions on the web they just use the shared key, which seems to
-    // miss the point--if I have that then I don't need to "break" anything.
 
     memset(iv, 0, sizeof(iv));
 
